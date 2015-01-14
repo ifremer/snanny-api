@@ -53,7 +53,7 @@ public final class JSONMessageBodyHandler implements MessageBodyWriter<Object>, 
 			}
 
 			try {
-				// TODO: est-ce que ca fonctionne si on met readable à true et que l'on envoi du JSON ?
+				// TODO: est-ce que ca fonctionne si on met readable Ã  true et que l'on envoi du JSON ?
 				return jsonTranscoder.stringToJsonObject(out.toString());
 			} catch (Exception e) {
 				throw new WebApplicationException("Error while parsing JSON", e);
