@@ -9,10 +9,10 @@ import com.couchbase.client.java.view.ViewRow;
 
 public class SystemsDB {
 
-	public JsonArray getSystems() throws Exception {
+	public JsonArray getSystems() {
 		JsonArray result = JsonArray.empty();
 
-		ViewQuery viewQuery = ViewQuery.from("dev_test", "systems");
+		ViewQuery viewQuery = ViewQuery.from(Configuration.getInstance().systemsViewDesign(), Configuration.getInstance().systemsViewName());
 
 		ViewResult viewResponse = ConnectionManager.systems.query(viewQuery);
 		for (ViewRow row : viewResponse.allRows()) {

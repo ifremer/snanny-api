@@ -9,12 +9,11 @@ import com.couchbase.client.java.view.ViewRow;
 
 public class ObservationsDB {
 
-	public JsonObject getObservations(String bboxQuery, String fromQuery, String toQuery) throws Exception {
+	public JsonObject getObservations(String bboxQuery, String fromQuery, String toQuery) {
 		JsonObject result = JsonObject.empty();
 		JsonArray features = JsonArray.empty();
 
-		ViewQuery viewQuery = ViewQuery.from("dev_test", "observations_bbox_corrected")
-//				.limit(65)
+		ViewQuery viewQuery = ViewQuery.from(Configuration.getInstance().observationsViewDesign(), Configuration.getInstance().observationsViewName())
 				;
 
 		if (!fromQuery.isEmpty() && !toQuery.isEmpty()) {
@@ -31,15 +30,11 @@ public class ObservationsDB {
 
 		}
 
-//		ViewResult viewResponse = ConnectionManager.observations_dev.query(viewQuery);
 		ViewResult viewResponse = ConnectionManager.observations.query(viewQuery);
 		for (ViewRow row : viewResponse.allRows()) {
 
 			JsonObject parsedDoc = (JsonObject) row.value();
 
-//			JsonObject observation = JsonObject.empty().put("author", parsedDoc.getString("author")).put("date", row.key())
-//					.put("description", parsedDoc.getString("description")).put("boundedBox", parsedDoc.getObject("boundedBox"));
-			
 			parsedDoc.getObject("properties").put("id", row.id());
 
 			features.add(parsedDoc);
