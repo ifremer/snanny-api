@@ -57,10 +57,11 @@
 			<version>3.1.0</version>
 		</dependency>
 
+		<!-- see http://mvnrepository.com/artifact/com.couchbase.client/java-client -->
 		<dependency>
 			<groupId>com.couchbase.client</groupId>
 			<artifactId>java-client</artifactId>
-			<version>2.0.1</version>
+			<version>2.1.1</version>
 			<scope>compile</scope>
 		</dependency>
 
