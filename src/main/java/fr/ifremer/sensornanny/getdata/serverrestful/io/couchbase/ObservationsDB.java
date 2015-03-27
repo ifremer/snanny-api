@@ -143,6 +143,8 @@ public class ObservationsDB {
     		queryBeginTime = Long.parseLong(time[0]);
     		queryEndTime   = Long.parseLong(time[1]);
     	}
+        
+        long begin = System.currentTimeMillis();
     	
     	try {
     		
@@ -156,8 +158,7 @@ public class ObservationsDB {
     			SpatialViewQuery query = SpatialViewQuery.from(Configuration.getInstance().observationsIndividualViewDesign(), Configuration.getInstance().observationsIndividualGeoTemporalViewName())
     					.startRange(JsonArray.from(queryLowerLongitude, queryLowerLatitude, queryBeginTime))
     					.endRange(JsonArray.from(queryUpperLongitude, queryUpperLatitude, queryEndTime));
-    			
-    			long begin = System.currentTimeMillis();
+
     			SpatialViewResult spatialViewResult = ConnectionManager.observations.query(query, Configuration.getInstance().individualQueryTimeout(), TimeUnit.MILLISECONDS);
     			
     			List<SpatialViewRow> rows = spatialViewResult.allRows(Configuration.getInstance().individualCollectTimeout(), TimeUnit.MILLISECONDS);
@@ -166,7 +167,7 @@ public class ObservationsDB {
     				logger.info("SPATIAL QUERY Took " + (System.currentTimeMillis() - begin) + " ms to find " + rows.size() + " matching document" + (rows.size() > 1 ? "s" : ""));
     			}
     			
-    			if (rows.size() < 5000) {
+    			if (rows.size() <= Configuration.getInstance().individualQueryMaximumDocuments()) {
     				for (SpatialViewRow row : rows) {
     					JsonObject feature = row.document().content();
     					
@@ -175,7 +176,11 @@ public class ObservationsDB {
     					
     					features.add(feature);
     				}
-    			}
+    			} else {
+                    if (Configuration.getInstance().individualDebug()) {
+                        logger.info("SPATIAL QUERY Found " + rows.size() + "documents. Excess the limit of " + Configuration.getInstance().individualQueryMaximumDocuments());
+                    }
+                }
     			
     			if (Configuration.getInstance().individualDebug()) {
     				logger.info("SPATIAL QUERY Documents Retrieving Took " + (System.currentTimeMillis() - begin) + " ms. Found " + features.size() + " measure" + (features.size() > 1 ? "s" : ""));
@@ -197,6 +202,10 @@ public class ObservationsDB {
     		logger.severe(e.toString());
     	}
     	
+        if (Configuration.getInstance().individualDebug() && features.size() == 0) {
+            logger.info("No document retrieved using bbox=" + bboxQuery + " and time=" + timeQuery + ". Took " + (System.currentTimeMillis() - begin) + " ms.");
+        }
+        
     	result.put("type", "FeatureCollection");
     	result.put("features", features);
     	
