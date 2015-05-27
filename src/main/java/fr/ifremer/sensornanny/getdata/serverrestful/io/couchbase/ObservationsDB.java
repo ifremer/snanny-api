@@ -117,7 +117,7 @@ public class ObservationsDB {
     public JsonObject getObservations(String bboxQuery, String timeQuery) throws TooManyObservationsException {
     	JsonObject result = JsonObject.empty();
     	JsonArray features = JsonArray.empty();
-    	
+    	String status = "success";
     	String[] bbox = bboxQuery.split(",");
     	
     	double queryLowerLatitude  = -90;
@@ -179,11 +179,12 @@ public class ObservationsDB {
     			} else {
                     if (Configuration.getInstance().individualDebug()) {
                         logger.info("SPATIAL QUERY Found " + rows.size() + "documents. Excess the limit of " + Configuration.getInstance().individualQueryMaximumDocuments());
+                        status = "tooMany";                        
                     }
                 }
     			
     			if (Configuration.getInstance().individualDebug()) {
-    				logger.info("SPATIAL QUERY Documents Retrieving Took " + (System.currentTimeMillis() - begin) + " ms. Found " + features.size() + " measure" + (features.size() > 1 ? "s" : ""));
+    				logger.info("SPATIAL QUERY Documents Retrieving Took " + (System.currentTimeMillis() - begin) + " ms. Found " + features.size() + " measure" + (features.size() > 1 ? "s" : ""));    			    
     			}
     		}
     		
@@ -193,8 +194,13 @@ public class ObservationsDB {
     				throw runtimeException.getCause();
     			}
     		} catch (TimeoutException timeoutException) {
-//    			logger.severe(timeoutException.toString());
-//				throw new TooManyObservationsException(-1);
+    			logger.severe(timeoutException.toString());
+    			logger.info("Too long request to retrieve obsvations using bbox=" + bboxQuery + " and time=" + timeQuery + ". Took " + (System.currentTimeMillis() - begin) + " ms.");
+    			status = "timeOut";
+    			result.put("status", status);
+    			return result;
+				//throw new TooManyObservationsException(-1);
+				
     		} catch (Throwable e) {
     			logger.severe(e.toString());
     		}
@@ -204,8 +210,10 @@ public class ObservationsDB {
     	
         if (Configuration.getInstance().individualDebug() && features.size() == 0) {
             logger.info("No document retrieved using bbox=" + bboxQuery + " and time=" + timeQuery + ". Took " + (System.currentTimeMillis() - begin) + " ms.");
+            status = "empty";
         }
         
+        result.put("status", status);
     	result.put("type", "FeatureCollection");
     	result.put("features", features);
     	
