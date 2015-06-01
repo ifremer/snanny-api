@@ -176,6 +176,11 @@ public class ObservationsDB {
     					
     					features.add(feature);
     				}
+    			 if (Configuration.getInstance().individualDebug() && rows.size() == 0) {
+    			        logger.info("No document retrieved using bbox=" + bboxQuery + " and time=" + timeQuery + ". Took " + (System.currentTimeMillis() - begin) + " ms.");
+    			        status = "empty";
+    			  }	
+    				
     			} else {
                     if (Configuration.getInstance().individualDebug()) {
                         logger.info("SPATIAL QUERY Found " + rows.size() + "documents. Excess the limit of " + Configuration.getInstance().individualQueryMaximumDocuments());
@@ -208,10 +213,7 @@ public class ObservationsDB {
     		logger.severe(e.toString());
     	}
     	
-        if (Configuration.getInstance().individualDebug() && features.size() == 0) {
-            logger.info("No document retrieved using bbox=" + bboxQuery + " and time=" + timeQuery + ". Took " + (System.currentTimeMillis() - begin) + " ms.");
-            status = "empty";
-        }
+   
         
         result.put("status", status);
     	result.put("type", "FeatureCollection");
@@ -311,6 +313,8 @@ public class ObservationsDB {
 			}
 		}
 
+		long totalCount = 0;
+		long localCount;
 		for (Map.Entry<String, Integer> each : countBySquare.entrySet()) {
 			String[] latLng = each.getKey().split(";");
 			if (latLng.length == 2) {
@@ -320,7 +324,9 @@ public class ObservationsDB {
 				feature.put("type", "Feature");
 
 				JsonObject properties = JsonObject.empty();
-				properties.put("count", each.getValue());
+				localCount = each.getValue();
+				properties.put("count", localCount);
+				totalCount += localCount;
 				properties.put("ratio", (each.getValue() * 100) / maximum);
 				properties.put("ratio_visible", (each.getValue() * 100) / maximumVisible);
 				feature.put("properties", properties);
@@ -350,6 +356,7 @@ public class ObservationsDB {
 		}
 
 		result.put("type", "FeatureCollection");
+		result.put("totalCount", totalCount);
 		result.put("features", features);
 
 		return result;
