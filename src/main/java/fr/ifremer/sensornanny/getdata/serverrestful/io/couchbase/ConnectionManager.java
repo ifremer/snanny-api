@@ -1,7 +1,5 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase;
 
-import java.util.logging.Logger;
-
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
@@ -16,7 +14,7 @@ public class ConnectionManager implements ServletContextListener {
     static Bucket systems;
     static Bucket observations;
 
-    private static final Logger logger = Logger.getLogger(ConnectionManager.class.getName());
+    // private static final Logger logger = Logger.getLogger(ConnectionManager.class.getName());
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {

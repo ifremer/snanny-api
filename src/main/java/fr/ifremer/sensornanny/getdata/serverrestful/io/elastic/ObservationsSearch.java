@@ -103,7 +103,7 @@ public class ObservationsSearch {
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
 
         // Get aggregation Map only
-        return searchRequest.setSize(0).execute().actionGet(ElasticConfiguration.queryTimeout(), TimeUnit.MILLISECONDS);
+        return searchRequest.setSize(0).execute().actionGet();
     }
 
     /**
@@ -134,8 +134,7 @@ public class ObservationsSearch {
         }
 
         // Get aggregation Time only
-        return searchRequest.setFrom(0).setSize(0).execute().actionGet(ElasticConfiguration.queryTimeout(),
-                TimeUnit.MILLISECONDS);
+        return searchRequest.setFrom(0).setSize(0).execute().actionGet();
     }
 
     /**

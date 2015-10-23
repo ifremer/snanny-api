@@ -6,7 +6,7 @@ tested with java 1.8 and maven 3.0.4 or above
 
 git clone https://github.com/ifremer/snanny-api.git
 
-mvn install
+mvn install -DskipTests
 
 deploy war in tomcat
 
@@ -18,9 +18,12 @@ Configuration files are :
   	Configuration for synthetic view
   - individual.properties
   	Configuration for individual view
+  - elasticsearch.properties
+    Configure elasticsearch clusters and search properties
   	
 ## Endpoints
 
+## V1 - Couchbase based api
 GET /api/rest/observations/synthetic/timeline?bbox=lat1,lon2,lat2,lon2&time=begin,end
 
 	Get synthetic view (time ranges with count) matching criteria
@@ -49,3 +52,43 @@ GET /api/rest/observations?bbox=lat1,lon2,lat2,lon2&time=begin,end
 	lat1,lat2 : range from -90 to 90
 	lon1,lon2 : range from -180 to 180
 	begin,end : timestamp in ms 
+	
+	
+## V2 - ElasticSearch based api
+GET /api/rest/obs/synthetic/timeline?bbox=lat1,lon2,lat2,lon2&kwords=keyword
+
+	Get synthetic view (time ranges with count) matching criteria
+	Configuration in synthetic.properties
+
+	lat1,lat2 : range from -90 to 90
+	lon1,lon2 : range from -180 to 180
+	keyword : search keyword, each sequences separated by a comma
+	
+
+GET /api/rest/obs/synthetic/map?bbox=lat1,lon2,lat2,lon2&time=begin,end&kwords=keyword
+
+	Get synthetic view (geo boxes with count) matching criteria
+	Configuration in synthetic.properties
+
+	lat1,lat2 : range from -90 to 90
+	lon1,lon2 : range from -180 to 180
+	begin,end : timestamp in ms
+	keyword : search keyword, each sequences separated by a comma
+	
+	
+GET /api/rest/obs?bbox=lat1,lon2,lat2,lon2&time=begin,end&kwords=keyword
+
+	Get individual points of observation matching criteria
+	Configuration in individual.properties
+
+	lat1,lat2 : range from -90 to 90
+	lon1,lon2 : range from -180 to 180
+	begin,end : timestamp in ms
+	keyword : search keyword, each sequences separated by a comma
+	
+GET /api/rest/obs/scroll?id=scrollId
+
+	Get individual points of observation matching criteria
+	Configuration in individual.properties
+
+	scrollId : pagination identifier to retrieve next observations of a previous query
