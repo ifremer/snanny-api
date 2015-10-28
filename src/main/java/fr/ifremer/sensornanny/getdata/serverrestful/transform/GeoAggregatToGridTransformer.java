@@ -1,5 +1,6 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.transform;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +30,6 @@ public class GeoAggregatToGridTransformer {
     private static final String COORDINATES_PROPERTY = "coordinates";
     private static final String POLYGON_VALUE = "Polygon";
     private static final String PROPERTIES_PROPERTY = "properties";
-    private static final String RATIO_PROPERTY_VISIBLE = "ratio_visible";
     private static final String RATIO_PROPERTY = "ratio";
     private static final String COUNT_PROPERTY = "count";
     private static final String FEATURE_VALUE = "Feature";
@@ -99,40 +99,42 @@ public class GeoAggregatToGridTransformer {
         Map<DegreesDivision, Long> map = transform(aggregat, degreesDivision);
 
         JsonArray resultArray = JsonArray.empty();
-        Set<java.util.Map.Entry<DegreesDivision, Long>> entrySet = map.entrySet();
-        for (java.util.Map.Entry<DegreesDivision, Long> each : entrySet) {
+        if (!map.isEmpty()) {
+            Set<java.util.Map.Entry<DegreesDivision, Long>> entrySet = map.entrySet();
+            final Long maxValue = Collections.max(map.values());
+            for (java.util.Map.Entry<DegreesDivision, Long> each : entrySet) {
 
-            JsonObject feature = JsonObject.create().put(TYPE_PROPERTY, FEATURE_VALUE);
+                JsonObject feature = JsonObject.create().put(TYPE_PROPERTY, FEATURE_VALUE);
 
-            JsonObject properties = JsonObject.create();
-            float floatValue = (float) each.getValue();
-            properties.put(COUNT_PROPERTY, floatValue);
-            properties.put(RATIO_PROPERTY, (int) ((floatValue / totalCount) * 1000));
-            properties.put(RATIO_PROPERTY_VISIBLE, (int) ((floatValue / totalVisible) * 1000));
-            feature.put(PROPERTIES_PROPERTY, properties);
+                JsonObject properties = JsonObject.create();
+                float floatValue = (float) each.getValue();
+                properties.put(COUNT_PROPERTY, floatValue);
+                properties.put(RATIO_PROPERTY, (int) (floatValue * 100 / maxValue));
+                feature.put(PROPERTIES_PROPERTY, properties);
 
-            JsonObject geometry = JsonObject.create();
-            geometry.put(TYPE_PROPERTY, POLYGON_VALUE);
-            JsonArray coordinates = JsonArray.empty();
+                JsonObject geometry = JsonObject.create();
+                geometry.put(TYPE_PROPERTY, POLYGON_VALUE);
+                JsonArray coordinates = JsonArray.empty();
 
-            JsonArray coordinate = JsonArray.empty();
-            coordinates.add(coordinate);
+                JsonArray coordinate = JsonArray.empty();
+                coordinates.add(coordinate);
 
-            double lowerLatitude = each.getKey().getLat();
-            double lowerLongitude = each.getKey().getLon();
-            double upperLatitude = MathUtil.floorTwoDigits(lowerLatitude + degreesDivision);
-            double upperLongitude = MathUtil.floorTwoDigits(lowerLongitude + degreesDivision);
+                double lowerLatitude = each.getKey().getLat();
+                double lowerLongitude = each.getKey().getLon();
+                double upperLatitude = MathUtil.floorTwoDigits(lowerLatitude + degreesDivision);
+                double upperLongitude = MathUtil.floorTwoDigits(lowerLongitude + degreesDivision);
 
-            coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
-            coordinate.add(JsonArray.empty().add(upperLongitude).add(upperLatitude));
-            coordinate.add(JsonArray.empty().add(upperLongitude).add(lowerLatitude));
-            coordinate.add(JsonArray.empty().add(lowerLongitude).add(lowerLatitude));
-            coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
+                coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
+                coordinate.add(JsonArray.empty().add(upperLongitude).add(upperLatitude));
+                coordinate.add(JsonArray.empty().add(upperLongitude).add(lowerLatitude));
+                coordinate.add(JsonArray.empty().add(lowerLongitude).add(lowerLatitude));
+                coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
 
-            geometry.put(COORDINATES_PROPERTY, coordinates);
-            feature.put(GEOMETRY_PROPERTY, geometry);
+                geometry.put(COORDINATES_PROPERTY, coordinates);
+                feature.put(GEOMETRY_PROPERTY, geometry);
 
-            resultArray.add(feature);
+                resultArray.add(feature);
+            }
         }
 
         return resultArray;

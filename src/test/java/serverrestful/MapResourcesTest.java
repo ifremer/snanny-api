@@ -2,8 +2,9 @@ package serverrestful;
 
 import java.util.Calendar;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.couchbase.client.java.document.json.JsonObject;
@@ -13,19 +14,19 @@ import fr.ifremer.sensornanny.getdata.serverrestful.rest.resources.ObservationsE
 
 public class MapResourcesTest {
 
-    private static NodeManager nodeManager;
+    private NodeManager nodeManager;
 
-    private static ObservationsESResource resource;
+    private ObservationsESResource resource;
 
-    @BeforeClass
-    public static void onStartup() {
+    @Before
+    public void onStartup() {
         nodeManager = new NodeManager();
         nodeManager.contextInitialized(null);
         resource = new ObservationsESResource();
     }
 
-    @AfterClass
-    public static void onShutdown() {
+    @After
+    public void onShutdown() {
         nodeManager.contextDestroyed(null);
     }
 
@@ -73,6 +74,27 @@ public class MapResourcesTest {
             }
             count++;
         }
+    }
+
+    @Test
+    public void queryIgnoreCase() {
+        Long resultsUpperCase = resource.getObservations(null, null, "THALASSA").getLong("totalCount");
+        Long resultsLowerCases = resource.getObservations(null, null, "thalassa").getLong("totalCount");
+        Long resultsMixedCases = resource.getObservations(null, null, "tHaLAsSa").getLong("totalCount");
+
+        Assert.assertEquals(resultsUpperCase, resultsMixedCases);
+        Assert.assertEquals(resultsUpperCase, resultsLowerCases);
+
+    }
+
+    @Test
+    public void queryWithAndElements() {
+        Long resultYear = resource.getObservations(null, null, "2012").getLong("totalCount");
+        Long resultWordA = resource.getObservations(null, null, "tHaLAsSa").getLong("totalCount");
+        Long resultWordAndYear = resource.getObservations(null, null, "tHaLAsSa 2012").getLong("totalCount");
+
+        Assert.assertTrue(resultYear > resultWordAndYear);
+        Assert.assertTrue(resultWordA > resultWordAndYear);
     }
 
 }

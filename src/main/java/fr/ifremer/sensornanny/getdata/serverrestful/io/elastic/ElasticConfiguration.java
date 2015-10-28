@@ -13,6 +13,7 @@ public class ElasticConfiguration {
 
     /** Property file */
     private static final String CONFIGURATION_ELASTICSEARCH_FILENAME = "elasticsearch.properties";
+    private static final String CONFIGURATION_SYNTHETIC_FILENAME = "synthetic.properties";
 
     private static final Logger logger = Logger.getLogger(ElasticConfiguration.class.getName());
 
@@ -23,6 +24,7 @@ public class ElasticConfiguration {
     private ElasticConfiguration() {
         properties = new Properties();
         PropertyLoader.load(CONFIGURATION_ELASTICSEARCH_FILENAME, properties);
+        PropertyLoader.load(CONFIGURATION_SYNTHETIC_FILENAME, properties);
     }
 
     /**
@@ -78,7 +80,7 @@ public class ElasticConfiguration {
      * @return number of items per page (ex : 10000)
      */
     public static int scrollPagination() {
-        return Integer.parseInt(get("es.scroll.itemsPerPage"));
+        return getInt("es.scroll.itemsPerPage");
     }
 
     /**
@@ -87,7 +89,7 @@ public class ElasticConfiguration {
      * @return aggregation limit
      */
     public static int aggregationLimit() {
-        return Integer.parseInt(get("es.aggs.limit"));
+        return getInt("es.aggs.limit");
     }
 
     /**
@@ -97,7 +99,19 @@ public class ElasticConfiguration {
      * @return max time allowed for a search request
      */
     public static int queryTimeout() {
-        return Integer.parseInt(get("es.query.timeout"));
+        return getInt("es.query.timeout");
+    }
+
+    public static double syntheticViewMinBinSize() {
+        return getDouble("syntheticViewMinBinSize");
+    }
+
+    public static int syntheticViewBinElements() {
+        return getInt("syntheticViewBinElements");
+    }
+
+    public static long syntheticTimelineMinDate() {
+        return getLong("syntheticTimelineMinDate");
     }
 
     private void checkProperties() {
@@ -118,6 +132,18 @@ public class ElasticConfiguration {
             throw new IllegalStateException(message);
         }
         return value;
+    }
+
+    private static int getInt(String property) {
+        return Integer.parseInt(get(property));
+    }
+
+    private static double getDouble(String property) {
+        return Double.parseDouble(get(property));
+    }
+
+    private static long getLong(String property) {
+        return Long.parseLong(get(property));
     }
 
 }

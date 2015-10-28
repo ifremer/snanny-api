@@ -24,8 +24,12 @@ public class AggregatTimeConsumer extends AbstractAggregatConsumer<InternalHisto
 
     @Override
     protected JsonObject createJSonElement(Bucket t) {
+        long longValue = t.getKeyAsNumber().longValue();
+        if (longValue < 0) {
+            return null;
+        }
         JsonObject element = JsonObject.create();
-        long timeInMillis = Instant.ofEpochSecond(t.getKeyAsNumber().longValue()).toEpochMilli();
+        long timeInMillis = Instant.ofEpochSecond(longValue).toEpochMilli();
         element.put(EVENT_PROPERTY, timeInMillis);
         element.put(VALUE_PROPERTY, t.getDocCount());
 

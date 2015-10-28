@@ -76,6 +76,7 @@ public class ObservationsESResource {
             result.put(FEATURES_PROPERTY, arr);
 
             hits = observations.getHits().getTotalHits();
+            result.put(TOTAL_COUNT_PROPERTY, hits);
             if (hits == 0) {
                 result.put(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
             } else if (hits > ElasticConfiguration.aggregationLimit()) {
@@ -172,6 +173,8 @@ public class ObservationsESResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Object getObservationsMap(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery,
             @QueryParam("kwords") String keywordsQuery) {
+        // Return empty element ne sera pas affiché
+        JsonObject result = JsonObject.create();
 
         long beginTime = System.currentTimeMillis();
         ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
@@ -184,9 +187,9 @@ public class ObservationsESResource {
                     .getLon());
         }
 
-        double subDivLat = lonDistance / 70;
-        if (subDivLat < 1.2) {
-            subDivLat = 1.2;
+        double subDivLat = lonDistance / ElasticConfiguration.syntheticViewBinElements();
+        if (subDivLat < ElasticConfiguration.syntheticViewMinBinSize()) {
+            subDivLat = ElasticConfiguration.syntheticViewMinBinSize();
         }
         long totalVisible = 0;
         // Get Geo Aggregats
@@ -203,7 +206,6 @@ public class ObservationsESResource {
             geoAggregat = response.getAggregations().get(ObservationsFields.AGGREGAT_GEOGRAPHIQUE);
         }
 
-        JsonObject result = JsonObject.create();
         result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
         result.put(TOTAL_COUNT_PROPERTY, totalVisible);
         JsonArray jsonArray = GeoAggregatToGridTransformer.toGeoJson(geoAggregat, subDivLat, totalHits, totalVisible);
@@ -215,7 +217,6 @@ public class ObservationsESResource {
                     query, jsonArray.size(), totalVisible, System.currentTimeMillis() - beginTime));
 
         }
-
         return result;
     }
 

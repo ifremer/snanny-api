@@ -14,7 +14,10 @@ import org.elasticsearch.common.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.GeoBoundingBoxFilterBuilder;
+import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.HistogramBuilder;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
@@ -26,6 +29,8 @@ import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
  *
  */
 public class ObservationsSearch {
+
+    private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
     private static final int MILLIS_TO_SECONDS = 1000;
 
@@ -54,8 +59,8 @@ public class ObservationsSearch {
         }
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         searchRequest.setFetchSource("doc.*", "meta.*");
-        searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
-        return searchRequest.setFrom(0).setSize(ElasticConfiguration.scrollPagination()).execute().actionGet(
+        // searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
+        return searchRequest.setFrom(0).setSize(ElasticConfiguration.aggregationLimit()).execute().actionGet(
                 ElasticConfiguration.queryTimeout(), TimeUnit.MILLISECONDS);
     }
 
@@ -85,19 +90,18 @@ public class ObservationsSearch {
 
         SearchRequestBuilder searchRequest = createQuery(query);
 
+        GeoHashGridBuilder geohashAggregation = AggregationBuilders.geohashGrid(
+                ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(4).field(ObservationsFields.COORDINATES);
+
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
             GeoBoundingBoxFilterBuilder geoFilter = FilterBuilders.geoBoundingBoxFilter(ObservationsFields.COORDINATES)
                     .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
-
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
-                    .subAggregation(AggregationBuilders.geohashGrid(ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(
-                            4).field(ObservationsFields.COORDINATES)).filter(geoFilter));
+                    .subAggregation(geohashAggregation).filter(geoFilter));
         } else {
-            searchRequest.addAggregation(AggregationBuilders.geohashGrid(ObservationsFields.AGGREGAT_GEOGRAPHIQUE)
-                    .precision(4).field(ObservationsFields.COORDINATES));
-
+            searchRequest.addAggregation(geohashAggregation);
         }
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
@@ -118,6 +122,10 @@ public class ObservationsSearch {
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
 
+        HistogramBuilder histogram = AggregationBuilders.histogram(ObservationsFields.AGGREGAT_DATE).field(
+                ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(
+                        ElasticConfiguration.syntheticTimelineMinDate(), null);
+
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
@@ -125,12 +133,9 @@ public class ObservationsSearch {
                     .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
 
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
-                    .subAggregation(AggregationBuilders.histogram(ObservationsFields.AGGREGAT_DATE).field(
-                            ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL)).filter(geoFilter));
+                    .subAggregation(histogram).filter(geoFilter));
         } else {
-            searchRequest.addAggregation(AggregationBuilders.histogram(ObservationsFields.AGGREGAT_DATE).field(
-                    ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL));
-
+            searchRequest.addAggregation(histogram);
         }
 
         // Get aggregation Time only
@@ -151,7 +156,8 @@ public class ObservationsSearch {
         BoolQueryBuilder boolQuery = boolQuery();
         // Add keywords fulltext search
         if (StringUtils.isNotBlank(query.getKeywords())) {
-            boolQuery.must(queryStringQuery(query.getKeywords()));
+            boolQuery.must(queryStringQuery(query.getKeywords()).analyzer(STANDARD_TOKEN_ANALYZER).defaultOperator(
+                    Operator.AND));
         }
         // Add range time search
         if (query.getTimeFrom() != null && query.getTimeTo() != null) {
