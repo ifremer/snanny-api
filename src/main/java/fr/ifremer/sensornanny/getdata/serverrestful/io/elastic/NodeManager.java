@@ -23,48 +23,56 @@ import fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.ConnectionManag
  */
 public class NodeManager implements ServletContextListener {
 
-	private static final String CLIENT_TRANSPORT_SNIFF = "client.transport.sniff";
+    private static final String CLIENT_TRANSPORT_SNIFF = "client.transport.sniff";
 
     private static final String CLUSTER_NAME = "cluster.name";
 
     private static final int ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
-	private static final Logger LOGGER = Logger.getLogger(ConnectionManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ConnectionManager.class.getName());
 
-	private static Settings clientSettings;
+    private static Settings clientSettings;
 
-	@Override
-	public void contextInitialized(ServletContextEvent sce) {
-		LOGGER.log(Level.INFO, "Connecting to ElasticSearch Cluster");
-		extractClientSettings();
+    private static TransportClient client;
 
-	}
+    public NodeManager() {
+        extractClientSettings();
+    }
 
-	private synchronized void extractClientSettings() {
-		if (clientSettings == null) {
-			clientSettings = ImmutableSettings.settingsBuilder()
-					.put(CLUSTER_NAME, ElasticConfiguration.clusterName())
-					.put(CLIENT_TRANSPORT_SNIFF, true).build();
-		}
-	}
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        LOGGER.log(Level.INFO, "Connecting to ElasticSearch Cluster");
+        extractClientSettings();
+    }
 
-	/**
-	 * Get the transport client for searchs
-	 * 
-	 * @return transport client configured with properties
-	 */
-	public Client getClient() {
-		extractClientSettings();
-		TransportClient client = new TransportClient(clientSettings);
-		String[] nodes = ElasticConfiguration.clusterHosts();
-		for (String host : nodes) {
-			client.addTransportAddress(new InetSocketTransportAddress(host, ELASTICSEARCH_TRANSPORT_PORT));
-		}
-		return client;
-	}
+    private void extractClientSettings() {
+        if (clientSettings == null) {
+            clientSettings = ImmutableSettings.settingsBuilder().put(CLUSTER_NAME, ElasticConfiguration.clusterName())
+                    .put(CLIENT_TRANSPORT_SNIFF, true).build();
 
-	@Override
-	public void contextDestroyed(ServletContextEvent sce) {
-	}
+            client = new TransportClient(clientSettings);
+            String[] nodes = ElasticConfiguration.clusterHosts();
+            for (String host : nodes) {
+                client.addTransportAddress(new InetSocketTransportAddress(host, ELASTICSEARCH_TRANSPORT_PORT));
+            }
+        }
+    }
+
+    /**
+     * Get the transport client for searchs
+     * 
+     * @return transport client configured with properties
+     */
+    public Client getClient() {
+        LOGGER.log(Level.INFO, "GetClient " + client);
+        return client;
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        if (client != null) {
+            client.close();
+        }
+    }
 
 }
