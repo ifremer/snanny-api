@@ -206,6 +206,9 @@ public class ObservationsESResource {
             geoAggregat = response.getAggregations().get(ObservationsFields.AGGREGAT_GEOGRAPHIQUE);
         }
 
+        RequestStatuts status = (totalVisible < ElasticConfiguration.aggregationLimit()) ? RequestStatuts.SUCCESS
+                : RequestStatuts.TOOMANY;
+        result.put(STATUS_PROPERTY, status.toString());
         result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
         result.put(TOTAL_COUNT_PROPERTY, totalVisible);
         JsonArray jsonArray = GeoAggregatToGridTransformer.toGeoJson(geoAggregat, subDivLat, totalHits, totalVisible);

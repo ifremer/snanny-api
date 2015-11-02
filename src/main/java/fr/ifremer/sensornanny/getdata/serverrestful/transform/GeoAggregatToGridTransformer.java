@@ -109,7 +109,7 @@ public class GeoAggregatToGridTransformer {
                 JsonObject properties = JsonObject.create();
                 float floatValue = (float) each.getValue();
                 properties.put(COUNT_PROPERTY, floatValue);
-                properties.put(RATIO_PROPERTY, (int) (floatValue * 100 / maxValue));
+                properties.put(RATIO_PROPERTY, (int) 0.25f + (floatValue * 75 / maxValue));
                 feature.put(PROPERTIES_PROPERTY, properties);
 
                 JsonObject geometry = JsonObject.create();
