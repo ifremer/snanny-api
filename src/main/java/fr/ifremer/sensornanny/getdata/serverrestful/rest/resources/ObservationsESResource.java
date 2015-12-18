@@ -1,5 +1,7 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.rest.resources;
 
+import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
@@ -31,6 +33,11 @@ import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
 @Path(ObservationsESResource.PATH)
 public class ObservationsESResource {
+
+    private static final double GEOHASH_7 = 0.153;
+    private static final double GEOHASH_6 = 1.2;
+
+    private static final double GEOHASH_5 = 5;
 
     private static final String SCROLL_PROPERTY = "scroll";
 
@@ -83,9 +90,26 @@ public class ObservationsESResource {
                 result.put(STATUS_PROPERTY, RequestStatuts.TOOMANY.toString());
             } else {
                 result.put(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
-                for (SearchHit searchHit : observations.getHits().hits()) {
-                    arr.add(JsonObject.fromJson(searchHit.getSourceAsString()).get("doc"));
-                }
+                observations.getHits().forEach(new Consumer<SearchHit>() {
+
+                    @Override
+                    public void accept(SearchHit t) {
+                        JsonObject fromJson = (JsonObject) JsonObject.fromJson(t.getSourceAsString()).get("doc");
+                        JsonObject geometry = JsonObject.create();
+                        JsonObject ret = JsonObject.create();
+
+                        ret.put("properties", fromJson);
+                        ret.put("geometry", geometry);
+                        geometry.put("type", "Point");
+                        JsonObject coordinates = (JsonObject) fromJson.get("snanny-coordinates");
+                        geometry.put("coordinates", Arrays.asList(coordinates.get("lon"), coordinates.get("lat")));
+
+                        fromJson.removeKey("snanny-coordinates");
+
+                        arr.add(ret);
+
+                    }
+                });
                 // Has more data
                 if (arr.size() >= ElasticConfiguration.scrollPagination()) {
                     result.put(SCROLL_PROPERTY, observations.getScrollId());
@@ -177,20 +201,26 @@ public class ObservationsESResource {
         JsonObject result = JsonObject.create();
 
         long beginTime = System.currentTimeMillis();
-        ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
-        SearchResponse response = elasticDb.getMap(query);
 
         double lonDistance = GeoConstants.MAX_LON * 2;
+
+        ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
+
         if (query.getTo() != null) {
             // getBouncing
             lonDistance = (GeoConstants.MAX_LON + query.getTo().getLon()) - (GeoConstants.MAX_LON + query.getFrom()
                     .getLon());
         }
-
+        // Calculate subdivision square
         double subDivLat = lonDistance / ElasticConfiguration.syntheticViewBinElements();
         if (subDivLat < ElasticConfiguration.syntheticViewMinBinSize()) {
             subDivLat = ElasticConfiguration.syntheticViewMinBinSize();
         }
+
+        int precision = getPrecision(subDivLat);
+
+        SearchResponse response = elasticDb.getMap(query, precision);
+
         long totalVisible = 0;
         // Get Geo Aggregats
         InternalFilter internalFilter = response.getAggregations().get(
@@ -221,6 +251,21 @@ public class ObservationsESResource {
 
         }
         return result;
+    }
+
+    private int getPrecision(double subDivLat) {
+        // Find the most optimized precision function of the subDivSize
+        int precision = 5;
+        double kilometers = subDivLat * 110;
+        if (kilometers < GEOHASH_7) {
+            precision = 8;
+        } else if (kilometers < GEOHASH_6) {
+            precision = 7;
+        } else if (kilometers < GEOHASH_5) {
+            precision = 6;
+        }
+
+        return precision;
     }
 
     /**

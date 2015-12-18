@@ -12,8 +12,6 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.ConnectionManager;
-
 /**
  * NodeManager elasticsearch, allow to create a transportClient on the defined
  * clusters
@@ -29,7 +27,7 @@ public class NodeManager implements ServletContextListener {
 
     private static final int ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
-    private static final Logger LOGGER = Logger.getLogger(ConnectionManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(NodeManager.class.getName());
 
     private static Settings clientSettings;
 

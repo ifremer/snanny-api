@@ -25,13 +25,13 @@ public class MathUtilUnitTest {
         double result = MathUtil.floorTwoDigits(1.251);
         Assert.assertEquals(1.25d, result, 0d);
         result = MathUtil.floorTwoDigits(1.259);
-        Assert.assertEquals(1.25d, result, 0d);
+        Assert.assertEquals(1.26d, result, 0d);
     }
 
     @Test
     public void testFloorLongDigits() {
         double result = MathUtil.floorTwoDigits(Math.PI);
-        Assert.assertEquals(3.14d, result, 0d);
+        Assert.assertEquals(3.14, result, 0d);
     }
 
     @Test

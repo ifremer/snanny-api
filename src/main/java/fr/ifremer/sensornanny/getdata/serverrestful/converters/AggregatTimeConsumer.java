@@ -1,7 +1,5 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.converters;
 
-import java.time.Instant;
-
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram.Bucket;
 
@@ -29,7 +27,7 @@ public class AggregatTimeConsumer extends AbstractAggregatConsumer<InternalHisto
             return null;
         }
         JsonObject element = JsonObject.create();
-        long timeInMillis = Instant.ofEpochSecond(longValue).toEpochMilli();
+        long timeInMillis = longValue;
         element.put(EVENT_PROPERTY, timeInMillis);
         element.put(VALUE_PROPERTY, t.getDocCount());
 

@@ -17,7 +17,7 @@ import org.elasticsearch.index.query.GeoBoundingBoxFilterBuilder;
 import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
-import org.elasticsearch.search.aggregations.bucket.histogram.HistogramBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
@@ -30,11 +30,15 @@ import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
  */
 public class ObservationsSearch {
 
+    private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[] { "meta.*" };
+
+    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[] { "doc.snanny-uuid",
+            "doc.snanny-ancestors.snanny-ancestor-name", "doc.snanny-ancestors.snanny-ancestor-uuid", "doc.snanny-name",
+            "doc.snanny-coordinates" };
+
     private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
-    private static final int MILLIS_TO_SECONDS = 1000;
-
-    private static final int TIME_INTERVAL = 15 * 24 * 60 * 60;
+    private static final int TIME_INTERVAL = 15 * 24 * 60 * 60 * 1000;
 
     private NodeManager nodeManager = new NodeManager();
 
@@ -58,7 +62,8 @@ public class ObservationsSearch {
             searchRequest.setPostFilter(geoFilter);
         }
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
-        searchRequest.setFetchSource("doc.*", "meta.*");
+        searchRequest.setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS);
+
         // searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
         return searchRequest.setFrom(0).setSize(ElasticConfiguration.aggregationLimit()).execute().actionGet(
                 ElasticConfiguration.queryTimeout(), TimeUnit.MILLISECONDS);
@@ -86,12 +91,12 @@ public class ObservationsSearch {
      * 
      * @return aggregations of documents limited by the query in zones
      */
-    public SearchResponse getMap(ObservationQuery query) {
+    public SearchResponse getMap(ObservationQuery query, int precision) {
 
         SearchRequestBuilder searchRequest = createQuery(query);
 
         GeoHashGridBuilder geohashAggregation = AggregationBuilders.geohashGrid(
-                ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(4).field(ObservationsFields.COORDINATES);
+                ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(precision).field(ObservationsFields.COORDINATES);
 
         if (query.getFrom() != null && query.getTo() != null) {
 
@@ -121,13 +126,11 @@ public class ObservationsSearch {
         SearchRequestBuilder searchRequest = createQuery(query);
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
-
-        HistogramBuilder histogram = AggregationBuilders.histogram(ObservationsFields.AGGREGAT_DATE).field(
+        DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
                 ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(
                         ElasticConfiguration.syntheticTimelineMinDate(), null);
 
         if (query.getFrom() != null && query.getTo() != null) {
-
             // Prepare geo filter
             GeoBoundingBoxFilterBuilder geoFilter = FilterBuilders.geoBoundingBoxFilter(ObservationsFields.COORDINATES)
                     .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
@@ -161,8 +164,8 @@ public class ObservationsSearch {
         }
         // Add range time search
         if (query.getTimeFrom() != null && query.getTimeTo() != null) {
-            boolQuery.must(rangeQuery(ObservationsFields.RESULTTIMESTAMP).from(query.getTimeFrom() / MILLIS_TO_SECONDS)
-                    .to(query.getTimeTo() / MILLIS_TO_SECONDS));
+            boolQuery.must(rangeQuery(ObservationsFields.RESULTTIMESTAMP).from(query.getTimeFrom()).to(query
+                    .getTimeTo()));
         }
 
         if (boolQuery.hasClauses()) {

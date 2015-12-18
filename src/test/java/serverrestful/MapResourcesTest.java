@@ -37,7 +37,9 @@ public class MapResourcesTest {
 
     @Test
     public void testGetTimeLine() {
-        resource.getObservationsTime("-40.00,0.74,40.74,80.35", null);
+        Object result = resource.getObservationsTime("-40.00,0.74,40.74,80.35", null);
+
+        System.out.println(result);
     }
 
     @Test
@@ -67,6 +69,7 @@ public class MapResourcesTest {
         while (count < 5) {
             JsonObject observations = (JsonObject) resource.getObservations("17.81,-22.22,57.36,26.56",
                     "1292923514018,1323991177570", null);
+
             String scrollId = (String) observations.get("scroll");
             while (scrollId != null) {
                 JsonObject observations2 = (JsonObject) resource.getObservations(scrollId);
