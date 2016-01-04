@@ -12,13 +12,7 @@ deploy war in tomcat
 
 ## Configuration
 Configuration files are :
-  - couchbase.properties
-  	Configure couchbase cluster and views used by API
-  - synthetic.properties
-  	Configuration for synthetic view
-  - individual.properties
-  	Configuration for individual view
-  - elasticsearch.properties
+  - application.properties
     Configure elasticsearch clusters and search properties
   	
 ## Endpoints

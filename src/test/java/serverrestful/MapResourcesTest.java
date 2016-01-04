@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import com.couchbase.client.java.document.json.JsonObject;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.io.elastic.NodeManager;
+import fr.ifremer.sensornanny.getdata.serverrestful.io.NodeManager;
 import fr.ifremer.sensornanny.getdata.serverrestful.rest.resources.ObservationsESResource;
 
 public class MapResourcesTest {

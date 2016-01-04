@@ -11,7 +11,7 @@ import com.couchbase.client.java.document.json.JsonObject;
 import fr.ifremer.sensornanny.getdata.serverrestful.base.MockTest;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.RequestStatuts;
-import fr.ifremer.sensornanny.getdata.serverrestful.io.elastic.ObservationsSearch;
+import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
 import fr.ifremer.sensornanny.getdata.serverrestful.rest.resources.ObservationsESResource;
 
 public class MapResourcesMockTest extends MockTest {

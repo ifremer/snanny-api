@@ -1,4 +1,4 @@
-package fr.ifremer.sensornanny.getdata.serverrestful.io.elastic;
+package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
@@ -19,6 +19,7 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
 
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 
@@ -65,8 +66,8 @@ public class ObservationsSearch {
         searchRequest.setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS);
 
         // searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
-        return searchRequest.setFrom(0).setSize(ElasticConfiguration.aggregationLimit()).execute().actionGet(
-                ElasticConfiguration.queryTimeout(), TimeUnit.MILLISECONDS);
+        return searchRequest.setFrom(0).setSize(Config.aggregationLimit()).execute().actionGet(
+                Config.queryTimeout(), TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -80,8 +81,8 @@ public class ObservationsSearch {
 
         Client client = nodeManager.getClient();
         // Connect on indice
-        return client.prepareSearchScroll(scrollId).setScroll(ElasticConfiguration.scrollTimeout()).execute().actionGet(
-                ElasticConfiguration.queryTimeout(), TimeUnit.MILLISECONDS);
+        return client.prepareSearchScroll(scrollId).setScroll(Config.scrollTimeout()).execute().actionGet(
+                Config.queryTimeout(), TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -128,7 +129,7 @@ public class ObservationsSearch {
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
                 ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(
-                        ElasticConfiguration.syntheticTimelineMinDate(), null);
+                        Config.syntheticTimelineMinDate(), null);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
@@ -154,7 +155,7 @@ public class ObservationsSearch {
     private SearchRequestBuilder createQuery(ObservationQuery query) {
         Client client = nodeManager.getClient();
         // Connect on indice
-        SearchRequestBuilder searchRequest = client.prepareSearch(ElasticConfiguration.observationsIndex());
+        SearchRequestBuilder searchRequest = client.prepareSearch(Config.observationsIndex());
 
         BoolQueryBuilder boolQuery = boolQuery();
         // Add keywords fulltext search

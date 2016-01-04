@@ -20,14 +20,13 @@ import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
 import com.couchbase.client.java.document.json.JsonArray;
 import com.couchbase.client.java.document.json.JsonObject;
 
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.GeoConstants;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.converters.AggregatTimeConsumer;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.RequestStatuts;
-import fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.Configuration;
-import fr.ifremer.sensornanny.getdata.serverrestful.io.elastic.ElasticConfiguration;
-import fr.ifremer.sensornanny.getdata.serverrestful.io.elastic.ObservationsSearch;
+import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
 import fr.ifremer.sensornanny.getdata.serverrestful.transform.GeoAggregatToGridTransformer;
 import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
@@ -86,7 +85,7 @@ public class ObservationsESResource {
             result.put(TOTAL_COUNT_PROPERTY, hits);
             if (hits == 0) {
                 result.put(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
-            } else if (hits > ElasticConfiguration.aggregationLimit()) {
+            } else if (hits > Config.aggregationLimit()) {
                 result.put(STATUS_PROPERTY, RequestStatuts.TOOMANY.toString());
             } else {
                 result.put(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
@@ -111,7 +110,7 @@ public class ObservationsESResource {
                     }
                 });
                 // Has more data
-                if (arr.size() >= ElasticConfiguration.scrollPagination()) {
+                if (arr.size() >= Config.scrollPagination()) {
                     result.put(SCROLL_PROPERTY, observations.getScrollId());
                 }
             }
@@ -120,7 +119,7 @@ public class ObservationsESResource {
             result.put(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
         }
 
-        if (Configuration.getInstance().individualDebug()) {
+        if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
             String numberOfHits = (hits == null) ? "NaN" : hits.toString();
             String scroll = result.getString(SCROLL_PROPERTY) != null ? result.getString(SCROLL_PROPERTY) : "No";
@@ -161,7 +160,7 @@ public class ObservationsESResource {
                 arr.add(JsonObject.fromJson(searchHit.getSourceAsString()).get("doc"));
             }
             // Has more data
-            if (arr.size() >= ElasticConfiguration.scrollPagination()) {
+            if (arr.size() >= Config.scrollPagination()) {
                 result.put(SCROLL_PROPERTY, observations.getScrollId());
             }
             result.put(FEATURES_PROPERTY, arr);
@@ -170,7 +169,7 @@ public class ObservationsESResource {
             result.put(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
         }
 
-        if (Configuration.getInstance().individualDebug()) {
+        if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
             String numberOfHits = (hits == null) ? "NaN" : hits.toString();
             String scroll = result.getString(SCROLL_PROPERTY) != null ? result.getString(SCROLL_PROPERTY) : "No";
@@ -212,9 +211,9 @@ public class ObservationsESResource {
                     .getLon());
         }
         // Calculate subdivision square
-        double subDivLat = lonDistance / ElasticConfiguration.syntheticViewBinElements();
-        if (subDivLat < ElasticConfiguration.syntheticViewMinBinSize()) {
-            subDivLat = ElasticConfiguration.syntheticViewMinBinSize();
+        double subDivLat = lonDistance / Config.syntheticViewBinElements();
+        if (subDivLat < Config.syntheticViewMinBinSize()) {
+            subDivLat = Config.syntheticViewMinBinSize();
         }
 
         int precision = getPrecision(subDivLat);
@@ -236,7 +235,7 @@ public class ObservationsESResource {
             geoAggregat = response.getAggregations().get(ObservationsFields.AGGREGAT_GEOGRAPHIQUE);
         }
 
-        RequestStatuts status = (totalVisible < ElasticConfiguration.aggregationLimit()) ? RequestStatuts.SUCCESS
+        RequestStatuts status = (totalVisible < Config.aggregationLimit()) ? RequestStatuts.SUCCESS
                 : RequestStatuts.TOOMANY;
         result.put(STATUS_PROPERTY, status.toString());
         result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
@@ -244,7 +243,7 @@ public class ObservationsESResource {
         JsonArray jsonArray = GeoAggregatToGridTransformer.toGeoJson(geoAggregat, subDivLat, totalHits, totalVisible);
         result.put(FEATURES_PROPERTY, jsonArray);
 
-        if (Configuration.getInstance().individualDebug()) {
+        if (Config.debug()) {
             LOGGER.info(String.format(
                     "Get Geohash using query : %s\n\tResult :{numberOfAggregats: '%s', totalVisible:'%d' took '%dms'}",
                     query, jsonArray.size(), totalVisible, System.currentTimeMillis() - beginTime));
@@ -297,7 +296,7 @@ public class ObservationsESResource {
 
         AggregatTimeConsumer aggregatTimeConsumer = new AggregatTimeConsumer();
         timeAggregat.getBuckets().forEach(aggregatTimeConsumer);
-        if (Configuration.getInstance().individualDebug()) {
+        if (Config.debug()) {
             LOGGER.info(String.format("Get Timeline using query : %s\n\tResult :{numberOfAggregats: '%s', took '%dms'}",
                     query, aggregatTimeConsumer.getResult().size(), System.currentTimeMillis() - beginTime));
 
