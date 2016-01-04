@@ -1,4 +1,4 @@
-package fr.ifremer.sensornanny.getdata.serverrestful.io.elastic;
+package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,7 +12,7 @@ import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.ConnectionManager;
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 
 /**
  * NodeManager elasticsearch, allow to create a transportClient on the defined
@@ -29,7 +29,7 @@ public class NodeManager implements ServletContextListener {
 
     private static final int ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
-    private static final Logger LOGGER = Logger.getLogger(ConnectionManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(NodeManager.class.getName());
 
     private static Settings clientSettings;
 
@@ -47,11 +47,11 @@ public class NodeManager implements ServletContextListener {
 
     private void extractClientSettings() {
         if (clientSettings == null) {
-            clientSettings = ImmutableSettings.settingsBuilder().put(CLUSTER_NAME, ElasticConfiguration.clusterName())
+            clientSettings = ImmutableSettings.settingsBuilder().put(CLUSTER_NAME, Config.clusterName())
                     .put(CLIENT_TRANSPORT_SNIFF, true).build();
 
             client = new TransportClient(clientSettings);
-            String[] nodes = ElasticConfiguration.clusterHosts();
+            String[] nodes = Config.clusterHosts();
             for (String host : nodes) {
                 client.addTransportAddress(new InetSocketTransportAddress(host, ELASTICSEARCH_TRANSPORT_PORT));
             }

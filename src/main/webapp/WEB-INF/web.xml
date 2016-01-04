@@ -5,7 +5,7 @@
 	id="WebApp_ID" version="3.1">
 	<display-name>fr.ifremer.sensornanny.getdata.serverrestful</display-name>
 	<listener>
-		<listener-class>fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.ConnectionManager</listener-class>
+		<listener-class>fr.ifremer.sensornanny.getdata.serverrestful.io.NodeManager</listener-class>
 	</listener>
 	<servlet>
 		<servlet-name>Jersey Rest Service</servlet-name>

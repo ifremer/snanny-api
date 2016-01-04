@@ -49,6 +49,22 @@
 					<downloadJavadocs>true</downloadJavadocs>
 				</configuration>
 			</plugin>
+			
+			       <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+             <version>2.4</version>
+            <configuration>
+             <outputDirectory>MyDir</outputDirectory>
+                <archive>
+                    <manifest>
+                        <addClasspath>true</addClasspath>
+                        <classpathPrefix>lib</classpathPrefix>
+                        <mainClass>com.test.entryClassOfJarHavingMainMethod</mainClass>
+                    </manifest>
+                </archive>
+            </configuration>
+        </plugin>
 		</plugins>
 	</build>
 

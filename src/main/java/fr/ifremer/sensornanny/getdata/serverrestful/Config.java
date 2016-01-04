@@ -1,4 +1,4 @@
-package fr.ifremer.sensornanny.getdata.serverrestful.io.elastic;
+package fr.ifremer.sensornanny.getdata.serverrestful;
 
 import java.util.Properties;
 import java.util.logging.Level;
@@ -9,22 +9,20 @@ import fr.ifremer.sensornanny.getdata.serverrestful.util.properties.PropertyLoad
 /**
  * Configuation class for elastic search
  */
-public class ElasticConfiguration {
+public class Config {
 
     /** Property file */
-    private static final String CONFIGURATION_ELASTICSEARCH_FILENAME = "elasticsearch.properties";
-    private static final String CONFIGURATION_SYNTHETIC_FILENAME = "synthetic.properties";
+    private static final String CONFIGURATION_FILENAME = "application.properties";
 
-    private static final Logger logger = Logger.getLogger(ElasticConfiguration.class.getName());
+    private static final Logger logger = Logger.getLogger(Config.class.getName());
 
-    private static ElasticConfiguration instance = new ElasticConfiguration();
+    private static Config instance = new Config();
 
     private Properties properties;
 
-    private ElasticConfiguration() {
+    private Config() {
         properties = new Properties();
-        PropertyLoader.load(CONFIGURATION_ELASTICSEARCH_FILENAME, properties);
-        PropertyLoader.load(CONFIGURATION_SYNTHETIC_FILENAME, properties);
+        PropertyLoader.load(CONFIGURATION_FILENAME, properties);
     }
 
     /**
@@ -103,20 +101,24 @@ public class ElasticConfiguration {
     }
 
     public static double syntheticViewMinBinSize() {
-        return getDouble("syntheticViewMinBinSize");
+        return getDouble("es.syntheticViewMinBinSize");
     }
 
     public static int syntheticViewBinElements() {
-        return getInt("syntheticViewBinElements");
+        return getInt("es.syntheticViewBinElements");
     }
 
     public static long syntheticTimelineMinDate() {
-        return getLong("syntheticTimelineMinDate");
+        return getLong("es.syntheticTimelineMinDate");
+    }
+
+    public static boolean debug() {
+        return getBoolean("debug");
     }
 
     private void checkProperties() {
         if (properties == null) {
-            String message = "Property file '" + CONFIGURATION_ELASTICSEARCH_FILENAME + "' not initialized";
+            String message = "Property file '" + CONFIGURATION_FILENAME + "' not initialized";
             logger.log(Level.SEVERE, message);
             throw new IllegalStateException(message);
         }
@@ -126,7 +128,7 @@ public class ElasticConfiguration {
         instance.checkProperties();
         String value = instance.properties.getProperty(property);
         if (value == null) {
-            String message = "Property named " + property + " not found in '" + CONFIGURATION_ELASTICSEARCH_FILENAME
+            String message = "Property named " + property + " not found in '" + CONFIGURATION_FILENAME
                     + "'";
             logger.log(Level.SEVERE, message);
             throw new IllegalStateException(message);
@@ -144,6 +146,10 @@ public class ElasticConfiguration {
 
     private static long getLong(String property) {
         return Long.parseLong(get(property));
+    }
+
+    private static boolean getBoolean(String property) {
+        return Boolean.parseBoolean(get(property));
     }
 
 }

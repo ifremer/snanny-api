@@ -12,10 +12,10 @@ public final class ObservationsFields {
     public static final String DOC_FIELD = "doc";
 
     /** observations coordinates (geopoint) */
-    public static final String COORDINATES = "coordinates";
+    public static final String COORDINATES = "snanny-coordinates";
 
     /** observation timestamp */
-    public static final String RESULTTIMESTAMP = "resulttimestamp";
+    public static final String RESULTTIMESTAMP = "snanny-resulttimestamp";
 
     /** Aggragat on term descriptions and names */
     public static final String AGGREGAT_TERM = "term_agg";

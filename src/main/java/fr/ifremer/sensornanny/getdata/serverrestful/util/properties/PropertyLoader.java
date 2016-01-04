@@ -6,30 +6,30 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.io.couchbase.Configuration;
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 
 public class PropertyLoader {
 
-	private static final Logger logger = Logger.getLogger(PropertyLoader.class.getName());
+    private static final Logger logger = Logger.getLogger(PropertyLoader.class.getName());
 
-	public static Properties load(final String propertyFile, Properties properties) {
-		InputStream inputStream = Configuration.class.getClassLoader().getResourceAsStream(propertyFile);
+    public static Properties load(final String propertyFile, Properties properties) {
+        InputStream inputStream = Config.class.getClassLoader().getResourceAsStream(propertyFile);
 
-		if (inputStream != null) {
-			try {
-				if (properties == null) {
-					properties = new Properties();
-				}
-				properties.load(inputStream);
-			} catch (IOException e) {
-				properties = null;
-				logger.log(Level.SEVERE, "Error while reading '" + propertyFile + "'", e);
-			}
-		} else {
-			String message = "Property file '" + propertyFile + "' not found in the classpath";
-			logger.log(Level.SEVERE, message);
-			throw new IllegalStateException(message);
-		}
-		return properties;
-	}
+        if (inputStream != null) {
+            try {
+                if (properties == null) {
+                    properties = new Properties();
+                }
+                properties.load(inputStream);
+            } catch (IOException e) {
+                properties = null;
+                logger.log(Level.SEVERE, "Error while reading '" + propertyFile + "'", e);
+            }
+        } else {
+            String message = "Property file '" + propertyFile + "' not found in the classpath";
+            logger.log(Level.SEVERE, message);
+            throw new IllegalStateException(message);
+        }
+        return properties;
+    }
 }
