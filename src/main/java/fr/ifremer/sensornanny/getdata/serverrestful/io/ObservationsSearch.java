@@ -174,11 +174,16 @@ public class ObservationsSearch {
                     .getTimeTo()));
         }
 
-        FilterBuilder permissionFilter = createFilterPermission();
-        if (boolQuery.hasClauses()) {
-            searchRequest.setQuery(QueryBuilders.filteredQuery(boolQuery, permissionFilter));
-        } else {
-            searchRequest.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), permissionFilter));
+        // If the user filter is enabled filter the result otherwise only execute request
+        if (Config.userFilterEnabled()) {
+            FilterBuilder permissionFilter = createFilterPermission();
+            if (boolQuery.hasClauses()) {
+                searchRequest.setQuery(QueryBuilders.filteredQuery(boolQuery, permissionFilter));
+            } else {
+                searchRequest.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), permissionFilter));
+            }
+        } else if (boolQuery.hasClauses()) {
+            searchRequest.setQuery(boolQuery);
         }
 
         return searchRequest;
