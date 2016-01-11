@@ -12,8 +12,10 @@ import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.common.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.FilterBuilder;
 import org.elasticsearch.index.query.FilterBuilders;
 import org.elasticsearch.index.query.GeoBoundingBoxFilterBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
@@ -21,6 +23,8 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuild
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 
 /**
@@ -30,6 +34,8 @@ import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
  *
  */
 public class ObservationsSearch {
+
+    private static final int PUBLIC_ACCESS_TYPE = 2;
 
     private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[] { "meta.*" };
 
@@ -66,8 +72,8 @@ public class ObservationsSearch {
         searchRequest.setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS);
 
         // searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
-        return searchRequest.setFrom(0).setSize(Config.aggregationLimit()).execute().actionGet(
-                Config.queryTimeout(), TimeUnit.MILLISECONDS);
+        return searchRequest.setFrom(0).setSize(Config.aggregationLimit()).execute().actionGet(Config.queryTimeout(),
+                TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -81,8 +87,8 @@ public class ObservationsSearch {
 
         Client client = nodeManager.getClient();
         // Connect on indice
-        return client.prepareSearchScroll(scrollId).setScroll(Config.scrollTimeout()).execute().actionGet(
-                Config.queryTimeout(), TimeUnit.MILLISECONDS);
+        return client.prepareSearchScroll(scrollId).setScroll(Config.scrollTimeout()).execute().actionGet(Config
+                .queryTimeout(), TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -95,7 +101,6 @@ public class ObservationsSearch {
     public SearchResponse getMap(ObservationQuery query, int precision) {
 
         SearchRequestBuilder searchRequest = createQuery(query);
-
         GeoHashGridBuilder geohashAggregation = AggregationBuilders.geohashGrid(
                 ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(precision).field(ObservationsFields.COORDINATES);
 
@@ -128,8 +133,8 @@ public class ObservationsSearch {
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
-                ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(
-                        Config.syntheticTimelineMinDate(), null);
+                ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(Config
+                        .syntheticTimelineMinDate(), null);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
@@ -141,7 +146,6 @@ public class ObservationsSearch {
         } else {
             searchRequest.addAggregation(histogram);
         }
-
         // Get aggregation Time only
         return searchRequest.setFrom(0).setSize(0).execute().actionGet();
     }
@@ -158,6 +162,7 @@ public class ObservationsSearch {
         SearchRequestBuilder searchRequest = client.prepareSearch(Config.observationsIndex());
 
         BoolQueryBuilder boolQuery = boolQuery();
+
         // Add keywords fulltext search
         if (StringUtils.isNotBlank(query.getKeywords())) {
             boolQuery.must(queryStringQuery(query.getKeywords()).analyzer(STANDARD_TOKEN_ANALYZER).defaultOperator(
@@ -169,10 +174,35 @@ public class ObservationsSearch {
                     .getTimeTo()));
         }
 
+        FilterBuilder permissionFilter = createFilterPermission();
         if (boolQuery.hasClauses()) {
-            searchRequest.setQuery(boolQuery);
+            searchRequest.setQuery(QueryBuilders.filteredQuery(boolQuery, permissionFilter));
+        } else {
+            searchRequest.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), permissionFilter));
         }
 
         return searchRequest;
+    }
+
+    /**
+     * This method create a filter on data using permissions and current user
+     */
+    private FilterBuilder createFilterPermission() {
+        User currentUser = CurrentUserProvider.get();
+        // Is Public
+        FilterBuilder publicFilter = FilterBuilders.termFilter("snanny-access-type", PUBLIC_ACCESS_TYPE);
+
+        // If current user exist result will be is public or isAuthor or is shared
+        if (currentUser != null) {
+            return FilterBuilders.boolFilter().should(
+                    /** Should be public */
+                    publicFilter,
+                    /** Should be author */
+                    FilterBuilders.termFilter("snanny-author", currentUser.getLogin()),
+                    /** Should be shared with current user */
+                    FilterBuilders.termFilter("snanny-access-auth", currentUser.getLogin()));
+        }
+        return publicFilter;
+
     }
 }

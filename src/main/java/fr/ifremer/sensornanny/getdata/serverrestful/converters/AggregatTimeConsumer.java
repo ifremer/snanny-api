@@ -3,7 +3,7 @@ package fr.ifremer.sensornanny.getdata.serverrestful.converters;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram.Bucket;
 
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonObject;
 
 /**
  * Classe allow to transform Historigram buckets in json object
@@ -26,15 +26,15 @@ public class AggregatTimeConsumer extends AbstractAggregatConsumer<InternalHisto
         if (longValue < 0) {
             return null;
         }
-        JsonObject element = JsonObject.create();
+        JsonObject element = new JsonObject();
         long timeInMillis = longValue;
-        element.put(EVENT_PROPERTY, timeInMillis);
-        element.put(VALUE_PROPERTY, t.getDocCount());
+        element.addProperty(EVENT_PROPERTY, timeInMillis);
+        element.addProperty(VALUE_PROPERTY, t.getDocCount());
 
-        JsonObject time = JsonObject.create();
-        time.put(BEGIN_PROPERTY, (timeInMillis - SEMI_PERIOD_INTERVAL));
-        time.put(END_PROPERTY, (timeInMillis + SEMI_PERIOD_INTERVAL));
-        element.put(TIME_PROPERTY, time);
+        JsonObject time = new JsonObject();
+        time.addProperty(BEGIN_PROPERTY, (timeInMillis - SEMI_PERIOD_INTERVAL));
+        time.addProperty(END_PROPERTY, (timeInMillis + SEMI_PERIOD_INTERVAL));
+        element.add(TIME_PROPERTY, time);
 
         return element;
     }

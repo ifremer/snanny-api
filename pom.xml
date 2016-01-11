@@ -86,7 +86,6 @@
 			<artifactId>jersey-container-servlet-core</artifactId>
 		</dependency>
 
-
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
@@ -94,18 +93,10 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.couchbase.client</groupId>
-			<artifactId>java-client</artifactId>
-			<version>${couchbase.version}</version>
-			<scope>compile</scope>
-		</dependency>
-
-		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>${gson.version}</version>
 		</dependency>
-
 
 		<dependency>
 			<groupId>org.elasticsearch</groupId>

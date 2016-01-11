@@ -47,10 +47,14 @@ public final class QueryResolver {
         }
 
         if (timeQuery != null) {
-            String[] time = timeQuery.split(",");
-            if (time.length == 2) {
-                result.setTimeFrom(Long.parseLong(time[0]));
-                result.setTimeTo(Long.parseLong(time[1]));
+            try {
+                String[] time = timeQuery.split(",");
+                if (time.length == 2) {
+                    result.setTimeFrom(Long.parseLong(time[0]));
+                    result.setTimeTo(Long.parseLong(time[1]));
+                }
+            } catch (NumberFormatException e) {
+                // Impossible to get time query -> No filter
             }
         }
 

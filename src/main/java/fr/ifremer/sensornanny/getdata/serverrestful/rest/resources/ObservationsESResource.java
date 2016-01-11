@@ -1,6 +1,5 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.rest.resources;
 
-import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -17,8 +16,9 @@ import org.elasticsearch.search.aggregations.bucket.filter.InternalFilter;
 import org.elasticsearch.search.aggregations.bucket.geogrid.InternalGeoHashGrid;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
 
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.GeoConstants;
@@ -70,40 +70,46 @@ public class ObservationsESResource {
     public JsonObject getObservations(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery,
             @QueryParam("kwords") String keywordsQuery) {
 
-        JsonObject result = JsonObject.create();
+        JsonObject result = new JsonObject();
         ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
         long beginTime = System.currentTimeMillis();
         Long hits = null;
         try {
             SearchResponse observations = elasticDb.getObservations(query);
 
-            result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
-            JsonArray arr = JsonArray.create();
-            result.put(FEATURES_PROPERTY, arr);
+            result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
+            JsonArray arr = new JsonArray();
+            result.add(FEATURES_PROPERTY, arr);
 
             hits = observations.getHits().getTotalHits();
-            result.put(TOTAL_COUNT_PROPERTY, hits);
+            result.addProperty(TOTAL_COUNT_PROPERTY, hits);
             if (hits == 0) {
-                result.put(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
+                result.addProperty(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
             } else if (hits > Config.aggregationLimit()) {
-                result.put(STATUS_PROPERTY, RequestStatuts.TOOMANY.toString());
+                result.addProperty(STATUS_PROPERTY, RequestStatuts.TOOMANY.toString());
             } else {
-                result.put(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
+                result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
+                JsonParser parser = new JsonParser();
                 observations.getHits().forEach(new Consumer<SearchHit>() {
 
                     @Override
                     public void accept(SearchHit t) {
-                        JsonObject fromJson = (JsonObject) JsonObject.fromJson(t.getSourceAsString()).get("doc");
-                        JsonObject geometry = JsonObject.create();
-                        JsonObject ret = JsonObject.create();
 
-                        ret.put("properties", fromJson);
-                        ret.put("geometry", geometry);
-                        geometry.put("type", "Point");
+                        JsonObject fromJson = (JsonObject) parser.parse(t.getSourceAsString()).getAsJsonObject().get(
+                                "doc");
+                        JsonObject geometry = new JsonObject();
+                        JsonObject ret = new JsonObject();
+
+                        ret.add("properties", fromJson);
+                        ret.add("geometry", geometry);
+                        geometry.addProperty("type", "Point");
                         JsonObject coordinates = (JsonObject) fromJson.get("snanny-coordinates");
-                        geometry.put("coordinates", Arrays.asList(coordinates.get("lon"), coordinates.get("lat")));
+                        JsonArray coordinatesArr = new JsonArray();
+                        coordinatesArr.add(coordinates.get("lon"));
+                        coordinatesArr.add(coordinates.get("lat"));
+                        geometry.add("coordinates", coordinatesArr);
 
-                        fromJson.removeKey("snanny-coordinates");
+                        fromJson.remove("snanny-coordinates");
 
                         arr.add(ret);
 
@@ -111,18 +117,18 @@ public class ObservationsESResource {
                 });
                 // Has more data
                 if (arr.size() >= Config.scrollPagination()) {
-                    result.put(SCROLL_PROPERTY, observations.getScrollId());
+                    result.addProperty(SCROLL_PROPERTY, observations.getScrollId());
                 }
             }
         } catch (ElasticsearchException e) {
             // Query timeout exception
-            result.put(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
         }
 
         if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
             String numberOfHits = (hits == null) ? "NaN" : hits.toString();
-            String scroll = result.getString(SCROLL_PROPERTY) != null ? result.getString(SCROLL_PROPERTY) : "No";
+            String scroll = result.get(SCROLL_PROPERTY) != null ? result.get(SCROLL_PROPERTY).getAsString() : "No";
             LOGGER.info(String.format(
                     "Retrieve Observations using query : %s\n\tResult :{status: '%s', found: '%s', took '%dms', scroll:'%s'}",
                     query, result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
@@ -144,35 +150,35 @@ public class ObservationsESResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Object getObservations(@QueryParam("id") String scrollQuery) {
 
-        JsonObject result = JsonObject.create();
+        JsonObject result = new JsonObject();
         long beginTime = System.currentTimeMillis();
         Long hits = null;
         try {
             SearchResponse observations = elasticDb.getObservationsFromScroll(scrollQuery);
 
-            JsonArray arr = JsonArray.create();
+            JsonArray arr = new JsonArray();
 
-            result.put(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
-            result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
-
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
+            result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
+            JsonParser parser = new JsonParser();
             hits = observations.getHits().totalHits();
             for (SearchHit searchHit : observations.getHits().hits()) {
-                arr.add(JsonObject.fromJson(searchHit.getSourceAsString()).get("doc"));
+                arr.add(parser.parse(searchHit.getSourceAsString()).getAsJsonObject().get("doc"));
             }
             // Has more data
             if (arr.size() >= Config.scrollPagination()) {
-                result.put(SCROLL_PROPERTY, observations.getScrollId());
+                result.addProperty(SCROLL_PROPERTY, observations.getScrollId());
             }
-            result.put(FEATURES_PROPERTY, arr);
+            result.add(FEATURES_PROPERTY, arr);
         } catch (ElasticsearchException e) {
             // Query timeout exception
-            result.put(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
         }
 
         if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
             String numberOfHits = (hits == null) ? "NaN" : hits.toString();
-            String scroll = result.getString(SCROLL_PROPERTY) != null ? result.getString(SCROLL_PROPERTY) : "No";
+            String scroll = result.get(SCROLL_PROPERTY) != null ? result.get(SCROLL_PROPERTY).getAsString() : "No";
             LOGGER.info(String.format(
                     "Retrieve Observations using query : %s\n\tResult :{status: '%s', found: '%s', took '%dms', scroll:'%s'}",
                     "[Scroll = " + scrollQuery + "]", result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
@@ -197,7 +203,7 @@ public class ObservationsESResource {
     public Object getObservationsMap(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery,
             @QueryParam("kwords") String keywordsQuery) {
         // Return empty element ne sera pas affiché
-        JsonObject result = JsonObject.create();
+        JsonObject result = new JsonObject();
 
         long beginTime = System.currentTimeMillis();
 
@@ -237,11 +243,11 @@ public class ObservationsESResource {
 
         RequestStatuts status = (totalVisible < Config.aggregationLimit()) ? RequestStatuts.SUCCESS
                 : RequestStatuts.TOOMANY;
-        result.put(STATUS_PROPERTY, status.toString());
-        result.put(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
-        result.put(TOTAL_COUNT_PROPERTY, totalVisible);
+        result.addProperty(STATUS_PROPERTY, status.toString());
+        result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
+        result.addProperty(TOTAL_COUNT_PROPERTY, totalVisible);
         JsonArray jsonArray = GeoAggregatToGridTransformer.toGeoJson(geoAggregat, subDivLat, totalHits, totalVisible);
-        result.put(FEATURES_PROPERTY, jsonArray);
+        result.add(FEATURES_PROPERTY, jsonArray);
 
         if (Config.debug()) {
             LOGGER.info(String.format(

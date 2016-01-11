@@ -2,8 +2,8 @@ package fr.ifremer.sensornanny.getdata.serverrestful.converters;
 
 import java.util.function.Consumer;
 
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 /**
  * Abstract class that allow to create JSON array of of aggregat result
@@ -18,7 +18,7 @@ public abstract class AbstractAggregatConsumer<T> implements Consumer<T> {
     /**
      * Result array
      */
-    protected JsonArray jsonArray = JsonArray.create();
+    protected JsonArray jsonArray = new JsonArray();
 
     /**
      * Get the json array result

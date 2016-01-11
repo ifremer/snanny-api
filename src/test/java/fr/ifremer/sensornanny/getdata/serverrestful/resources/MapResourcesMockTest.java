@@ -6,7 +6,7 @@ import org.elasticsearch.ElasticsearchException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonObject;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.base.MockTest;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;

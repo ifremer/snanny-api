@@ -2,7 +2,7 @@ package fr.ifremer.sensornanny.getdata.serverrestful.converters;
 
 import org.elasticsearch.search.aggregations.bucket.terms.Terms.Bucket;
 
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonObject;
 
 /**
  * Allow to transform term buckets in json element
@@ -17,9 +17,9 @@ public class AggregatTermConsumer extends AbstractAggregatConsumer<Bucket> {
 
     @Override
     protected JsonObject createJSonElement(Bucket t) {
-        JsonObject element = JsonObject.create();
-        element.put(KEY_PROPERTY, t.getKey());
-        element.put(COUNT_PROPERTY, t.getDocCount());
+        JsonObject element = new JsonObject();
+        element.addProperty(KEY_PROPERTY, t.getKey());
+        element.addProperty(COUNT_PROPERTY, t.getDocCount());
         return element;
     }
 

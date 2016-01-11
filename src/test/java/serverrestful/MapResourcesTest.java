@@ -2,37 +2,52 @@ package serverrestful;
 
 import java.util.Calendar;
 
-import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonObject;
 
+import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.io.NodeManager;
 import fr.ifremer.sensornanny.getdata.serverrestful.rest.resources.ObservationsESResource;
 
 public class MapResourcesTest {
 
-    private NodeManager nodeManager;
+    private static NodeManager nodeManager;
 
-    private ObservationsESResource resource;
+    private static ObservationsESResource resource;
 
-    @Before
-    public void onStartup() {
+    @BeforeClass
+    public static void onStartup() {
         nodeManager = new NodeManager();
         nodeManager.contextInitialized(null);
         resource = new ObservationsESResource();
     }
 
-    @After
-    public void onShutdown() {
+    @AfterClass
+    public static void onShutdown() {
         nodeManager.contextDestroyed(null);
     }
 
     @Test
     public void testGetGrid() {
-        resource.getObservationsMap("-40.00,0.74,40.74,80.35", null, null);
+
+        JsonObject map = (JsonObject) resource.getObservationsMap("-180.00,-90.74,180.74,80.35", null, null);
+
+        System.out.println(map.get("totalCount"));
+
+        User user = new User();
+        user.setLogin("admin");
+        user.setRole(Role.ADMIN);
+
+        CurrentUserProvider.put(user);
+        map = (JsonObject) resource.getObservationsMap("-180.00,-90.74,180.74,80.35", null, null);
+
+        System.out.println(map.get("totalCount"));
     }
 
     @Test
@@ -63,27 +78,10 @@ public class MapResourcesTest {
     }
 
     @Test
-    public void testScroll() {
-
-        int count = 0;
-        while (count < 5) {
-            JsonObject observations = (JsonObject) resource.getObservations("17.81,-22.22,57.36,26.56",
-                    "1292923514018,1323991177570", null);
-
-            String scrollId = (String) observations.get("scroll");
-            while (scrollId != null) {
-                JsonObject observations2 = (JsonObject) resource.getObservations(scrollId);
-                scrollId = (String) observations2.get("scroll");
-            }
-            count++;
-        }
-    }
-
-    @Test
     public void queryIgnoreCase() {
-        Long resultsUpperCase = resource.getObservations(null, null, "THALASSA").getLong("totalCount");
-        Long resultsLowerCases = resource.getObservations(null, null, "thalassa").getLong("totalCount");
-        Long resultsMixedCases = resource.getObservations(null, null, "tHaLAsSa").getLong("totalCount");
+        Long resultsUpperCase = resource.getObservations(null, null, "THALASSA").get("totalCount").getAsLong();
+        Long resultsLowerCases = resource.getObservations(null, null, "thalassa").get("totalCount").getAsLong();
+        Long resultsMixedCases = resource.getObservations(null, null, "tHaLAsSa").get("totalCount").getAsLong();
 
         Assert.assertEquals(resultsUpperCase, resultsMixedCases);
         Assert.assertEquals(resultsUpperCase, resultsLowerCases);
@@ -92,9 +90,9 @@ public class MapResourcesTest {
 
     @Test
     public void queryWithAndElements() {
-        Long resultYear = resource.getObservations(null, null, "2012").getLong("totalCount");
-        Long resultWordA = resource.getObservations(null, null, "tHaLAsSa").getLong("totalCount");
-        Long resultWordAndYear = resource.getObservations(null, null, "tHaLAsSa 2012").getLong("totalCount");
+        Long resultYear = resource.getObservations(null, null, "2012").get("totalCount").getAsLong();
+        Long resultWordA = resource.getObservations(null, null, "tHaLAsSa").get("totalCount").getAsLong();
+        Long resultWordAndYear = resource.getObservations(null, null, "tHaLAsSa 2012").get("totalCount").getAsLong();
 
         Assert.assertTrue(resultYear > resultWordAndYear);
         Assert.assertTrue(resultWordA > resultWordAndYear);
