@@ -112,6 +112,15 @@ public class Config {
         return getLong("es.syntheticTimelineMinDate");
     }
 
+    /**
+     * Indicates if the api return data as open (false) or is filtered with context user
+     * 
+     * @return enabled status of user filter
+     */
+    public static boolean userFilterEnabled() {
+        return getBoolean("es.userFilter.enabled");
+    }
+
     public static boolean debug() {
         return getBoolean("debug");
     }
@@ -128,8 +137,7 @@ public class Config {
         instance.checkProperties();
         String value = instance.properties.getProperty(property);
         if (value == null) {
-            String message = "Property named " + property + " not found in '" + CONFIGURATION_FILENAME
-                    + "'";
+            String message = "Property named " + property + " not found in '" + CONFIGURATION_FILENAME + "'";
             logger.log(Level.SEVERE, message);
             throw new IllegalStateException(message);
         }

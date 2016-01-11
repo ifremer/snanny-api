@@ -12,8 +12,9 @@ import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGrid;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGrid.Bucket;
 import org.elasticsearch.search.aggregations.bucket.geogrid.InternalGeoHashGrid;
 
-import com.couchbase.client.java.document.json.JsonArray;
-import com.couchbase.client.java.document.json.JsonObject;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.DegreesDivision;
 import fr.ifremer.sensornanny.getdata.serverrestful.util.math.MathUtil;
@@ -98,25 +99,26 @@ public class GeoAggregatToGridTransformer {
 
         Map<DegreesDivision, Long> map = transform(aggregat, degreesDivision);
 
-        JsonArray resultArray = JsonArray.empty();
+        JsonArray resultArray = new JsonArray();
         if (!map.isEmpty()) {
             Set<java.util.Map.Entry<DegreesDivision, Long>> entrySet = map.entrySet();
             final Long maxValue = Collections.max(map.values());
             for (java.util.Map.Entry<DegreesDivision, Long> each : entrySet) {
 
-                JsonObject feature = JsonObject.create().put(TYPE_PROPERTY, FEATURE_VALUE);
+                JsonObject feature = new JsonObject();
+                feature.addProperty(TYPE_PROPERTY, FEATURE_VALUE);
 
-                JsonObject properties = JsonObject.create();
+                JsonObject properties = new JsonObject();
                 float floatValue = (float) each.getValue();
-                properties.put(COUNT_PROPERTY, floatValue);
-                properties.put(RATIO_PROPERTY, (int) 0.25f + (floatValue * 75 / maxValue));
-                feature.put(PROPERTIES_PROPERTY, properties);
+                properties.addProperty(COUNT_PROPERTY, floatValue);
+                properties.addProperty(RATIO_PROPERTY, (int) 0.25f + (floatValue * 75 / maxValue));
+                feature.add(PROPERTIES_PROPERTY, properties);
 
-                JsonObject geometry = JsonObject.create();
-                geometry.put(TYPE_PROPERTY, POLYGON_VALUE);
-                JsonArray coordinates = JsonArray.empty();
+                JsonObject geometry = new JsonObject();
+                geometry.addProperty(TYPE_PROPERTY, POLYGON_VALUE);
+                JsonArray coordinates = new JsonArray();
 
-                JsonArray coordinate = JsonArray.empty();
+                JsonArray coordinate = new JsonArray();
                 coordinates.add(coordinate);
 
                 double lowerLatitude = each.getKey().getLat();
@@ -124,20 +126,27 @@ public class GeoAggregatToGridTransformer {
                 double upperLatitude = MathUtil.floorTwoDigits(lowerLatitude + degreesDivision);
                 double upperLongitude = MathUtil.floorTwoDigits(lowerLongitude + degreesDivision);
 
-                coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
-                coordinate.add(JsonArray.empty().add(upperLongitude).add(upperLatitude));
-                coordinate.add(JsonArray.empty().add(upperLongitude).add(lowerLatitude));
-                coordinate.add(JsonArray.empty().add(lowerLongitude).add(lowerLatitude));
-                coordinate.add(JsonArray.empty().add(lowerLongitude).add(upperLatitude));
+                coordinate.add(createPoint(lowerLongitude, upperLatitude));
+                coordinate.add(createPoint(upperLongitude, upperLatitude));
+                coordinate.add(createPoint(upperLongitude, lowerLatitude));
+                coordinate.add(createPoint(lowerLongitude, lowerLatitude));
+                coordinate.add(createPoint(lowerLongitude, upperLatitude));
 
-                geometry.put(COORDINATES_PROPERTY, coordinates);
-                feature.put(GEOMETRY_PROPERTY, geometry);
+                geometry.add(COORDINATES_PROPERTY, coordinates);
+                feature.add(GEOMETRY_PROPERTY, geometry);
 
                 resultArray.add(feature);
             }
         }
 
         return resultArray;
+    }
+
+    private static JsonArray createPoint(double longiture, double latitude) {
+        JsonArray arr = new JsonArray();
+        arr.add(new JsonPrimitive(longiture));
+        arr.add(new JsonPrimitive(latitude));
+        return arr;
     }
 
 }
