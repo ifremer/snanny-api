@@ -24,6 +24,7 @@ import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuild
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 
@@ -45,7 +46,7 @@ public class ObservationsSearch {
 
     private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
-    private static final int TIME_INTERVAL = 15 * 24 * 60 * 60 * 1000;
+    private static final int DAYS_IN_MILLIS = 24 * 60 * 60 * 1000;
 
     private NodeManager nodeManager = new NodeManager();
 
@@ -125,7 +126,8 @@ public class ObservationsSearch {
      * Return the timeline aggregation for specified request query
      * 
      * @param query search in term, time, and geobox
-     * @return timeline aggregation with specified interval {@value #TIME_INTERVAL}
+     * @return timeline aggregation with specified interval {@link Config#syntheticViewTimeSize()} *
+     *         {@value #DAYS_IN_MILLIS}
      */
     public SearchResponse getTimeline(ObservationQuery query) {
 
@@ -133,8 +135,8 @@ public class ObservationsSearch {
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
-                ObservationsFields.RESULTTIMESTAMP).interval(TIME_INTERVAL).minDocCount(0).extendedBounds(Config
-                        .syntheticTimelineMinDate(), null);
+                ObservationsFields.RESULTTIMESTAMP).interval(Config.syntheticTimelineMinDate() * DAYS_IN_MILLIS)
+                .minDocCount(0).extendedBounds(Config.syntheticTimelineMinDate(), null);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
@@ -198,7 +200,7 @@ public class ObservationsSearch {
         FilterBuilder publicFilter = FilterBuilders.termFilter("snanny-access-type", PUBLIC_ACCESS_TYPE);
 
         // If current user exist result will be is public or isAuthor or is shared
-        if (currentUser != null) {
+        if (currentUser != null && !Role.ADMIN.equals(currentUser.getRole())) {
             return FilterBuilders.boolFilter().should(
                     /** Should be public */
                     publicFilter,

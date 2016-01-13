@@ -113,6 +113,15 @@ public class Config {
     }
 
     /**
+     * Bucket size of time aggregat
+     * 
+     * @return synthetic time size
+     */
+    public static int syntheticViewTimeSize() {
+        return getInt("es.syntheticViewTimeSize");
+    }
+
+    /**
      * Indicates if the api return data as open (false) or is filtered with context user
      * 
      * @return enabled status of user filter
