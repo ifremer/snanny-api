@@ -134,9 +134,10 @@ public class ObservationsSearch {
         SearchRequestBuilder searchRequest = createQuery(query);
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+        long interval = Config.syntheticViewTimeSize() * DAYS_IN_MILLIS;
         DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
-                ObservationsFields.RESULTTIMESTAMP).interval(Config.syntheticTimelineMinDate() * DAYS_IN_MILLIS)
-                .minDocCount(0).extendedBounds(Config.syntheticTimelineMinDate(), null);
+                ObservationsFields.RESULTTIMESTAMP).interval(interval).minDocCount(0).extendedBounds(Config
+                        .syntheticTimelineMinDate(), null);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
