@@ -1,5 +1,12 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.context;
 
+import java.util.Collection;
+
+import org.jasig.cas.client.util.AssertionHolder;
+import org.jasig.cas.client.validation.Assertion;
+
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
+
 /**
  * Util class that wrap context for usage in the whole application
  * 
@@ -8,34 +15,22 @@ package fr.ifremer.sensornanny.getdata.serverrestful.context;
  */
 public class CurrentUserProvider {
 
-    /***
-     * Thread local to keep context for a transaction
-     */
-    private static ThreadLocal<User> threadLocalUser = new ThreadLocal<>();
-
     /**
      * Return the connected user
      * 
      * @return user with role if connected otherwise <code>null</code>
      */
     public static User get() {
-        return threadLocalUser.get();
-    }
-
-    /**
-     * Allow to specify the current user at the beginning of the transaction
-     * 
-     * @param user current user at the beginning
-     */
-    public static void put(User user) {
-        threadLocalUser.set(user);
-    }
-
-    /**
-     * Allow to clear the current user at the end of the transaction
-     */
-    public static void clear() {
-        threadLocalUser.remove();
+        Assertion assertion = AssertionHolder.getAssertion();
+        if (assertion != null) {
+            String name = assertion.getPrincipal().getName();
+            // Check role using whitelist
+            Collection<String> adminWhitelist = Config.casAdminWhitelist();
+            Role role = (adminWhitelist != null && adminWhitelist.contains(name)) ? Role.ADMIN : Role.CONTRIB;
+            // Return user
+            return new User(name, role);
+        }
+        return null;
     }
 
 }

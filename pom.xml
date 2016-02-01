@@ -16,6 +16,8 @@
 		<couchbase.version>2.1.1</couchbase.version>
 		<gson.version>2.2.4</gson.version>
 		<elasticsearch.version>1.7.2</elasticsearch.version>
+		<!-- CAS -->
+		<cas.client.version>3.2.1</cas.client.version>
 
 		<!-- Tests Dependencies -->
 		<junit.version>4.12</junit.version>
@@ -102,7 +104,12 @@
 			<groupId>org.elasticsearch</groupId>
 			<artifactId>elasticsearch</artifactId>
 			<version>${elasticsearch.version}</version>
-			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.jasig.cas.client</groupId>
+		    <artifactId>cas-client-core</artifactId>
+		    <version>${cas.client.version}</version>
 		</dependency>
 
 		<!-- Test dependencies -->

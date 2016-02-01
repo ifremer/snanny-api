@@ -14,6 +14,7 @@ deploy war in tomcat
 Configuration files are :
   - application.properties
     Configure elasticsearch clusters and search properties
+    
   	
 ## Endpoints
 

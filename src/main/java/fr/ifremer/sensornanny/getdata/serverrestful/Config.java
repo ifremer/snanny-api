@@ -1,5 +1,7 @@
 package fr.ifremer.sensornanny.getdata.serverrestful;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -132,6 +134,23 @@ public class Config {
 
     public static boolean debug() {
         return getBoolean("debug");
+    }
+
+    public static String casAuthUrl() {
+        return get("cas.authUrl");
+    }
+
+    public static String casServerName() {
+        return get("cas.serveurName");
+    }
+
+    /**
+     * List of administrators
+     * 
+     * @return array of hosts
+     */
+    public static Collection<String> casAdminWhitelist() {
+        return Arrays.asList(get("cas.admin.whitelist").split(","));
     }
 
     private void checkProperties() {
