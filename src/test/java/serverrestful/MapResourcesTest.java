@@ -2,6 +2,7 @@ package serverrestful;
 
 import java.util.Calendar;
 
+import org.jasig.cas.client.util.AssertionHolder;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -9,9 +10,6 @@ import org.junit.Test;
 
 import com.google.gson.JsonObject;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
-import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
-import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.io.NodeManager;
 import fr.ifremer.sensornanny.getdata.serverrestful.rest.resources.ObservationsESResource;
 
@@ -40,11 +38,7 @@ public class MapResourcesTest {
 
         System.out.println(map.get("totalCount"));
 
-        User user = new User();
-        user.setLogin("admin");
-        user.setRole(Role.ADMIN);
-
-        CurrentUserProvider.put(user);
+        AssertionHolder.setAssertion(new FakeAssertion("admin"));
         map = (JsonObject) resource.getObservationsMap("-180.00,-90.74,180.74,80.35", null, null);
 
         System.out.println(map.get("totalCount"));
@@ -52,8 +46,7 @@ public class MapResourcesTest {
 
     @Test
     public void testGetTimeLine() {
-        Object result = resource.getObservationsTime("-40.00,0.74,40.74,80.35", null);
-
+        Object result = resource.getObservationsTime("-76.44,-150.03,76.44,150.03", null);
         System.out.println(result);
     }
 
@@ -79,9 +72,10 @@ public class MapResourcesTest {
 
     @Test
     public void queryIgnoreCase() {
-        Long resultsUpperCase = resource.getObservations(null, null, "THALASSA").get("totalCount").getAsLong();
-        Long resultsLowerCases = resource.getObservations(null, null, "thalassa").get("totalCount").getAsLong();
-        Long resultsMixedCases = resource.getObservations(null, null, "tHaLAsSa").get("totalCount").getAsLong();
+        JsonObject observations = resource.getObservations(null, null, "Borel");
+        Long resultsUpperCase = observations.get("totalCount").getAsLong();
+        Long resultsLowerCases = resource.getObservations(null, null, "borel").get("totalCount").getAsLong();
+        Long resultsMixedCases = resource.getObservations(null, null, "BorEL").get("totalCount").getAsLong();
 
         Assert.assertEquals(resultsUpperCase, resultsMixedCases);
         Assert.assertEquals(resultsUpperCase, resultsLowerCases);

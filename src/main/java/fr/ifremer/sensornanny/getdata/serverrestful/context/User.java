@@ -14,6 +14,15 @@ public class User {
     /** Role of the user */
     private Role role;
 
+    public User(String login) {
+        this(login, null);
+    }
+
+    public User(String login, Role role) {
+        this.login = login;
+        this.role = role;
+    }
+
     public String getLogin() {
         return login;
     }

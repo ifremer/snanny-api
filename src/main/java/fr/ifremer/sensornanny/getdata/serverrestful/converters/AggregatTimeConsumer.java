@@ -5,6 +5,8 @@ import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram.
 
 import com.google.gson.JsonObject;
 
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
+
 /**
  * Classe allow to transform Historigram buckets in json object
  * 
@@ -18,11 +20,12 @@ public class AggregatTimeConsumer extends AbstractAggregatConsumer<InternalHisto
     private static final String TIME_PROPERTY = "time";
     private static final String BEGIN_PROPERTY = "begin";
     private static final String END_PROPERTY = "end";
-    private static final long SEMI_PERIOD_INTERVAL = (15 * 24 * 60 * 60 * 1000) / 2;
+    private static final long SEMI_PERIOD_INTERVAL = (Config.syntheticViewTimeSize() * 24 * 60 * 60 * 1000) / 2;
 
     @Override
     protected JsonObject createJSonElement(Bucket t) {
-        long longValue = t.getKeyAsNumber().longValue();
+        ;
+        long longValue = ((org.joda.time.DateTime) t.getKey()).getMillis();
         if (longValue < 0) {
             return null;
         }

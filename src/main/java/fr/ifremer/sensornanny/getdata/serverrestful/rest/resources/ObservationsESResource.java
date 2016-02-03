@@ -122,6 +122,7 @@ public class ObservationsESResource {
             }
         } catch (ElasticsearchException e) {
             // Query timeout exception
+            e.printStackTrace();
             result.addProperty(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
         }
 

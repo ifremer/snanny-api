@@ -54,7 +54,7 @@ public class GeoAggregatToGridTransformer {
 
             @Override
             public void accept(Bucket t) {
-                GeoPoint geoPoint = t.getKeyAsGeoPoint();
+                GeoPoint geoPoint = (GeoPoint) t.getKey();
 
                 // Calculate nearest geopoint
                 double lat = geoPoint.getLat() + 90;
