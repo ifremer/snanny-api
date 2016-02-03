@@ -10,6 +10,12 @@ import com.google.gson.JsonObject;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 
+/**
+ * User rest services
+ * 
+ * @author athorel
+ *
+ */
 @Path("/user")
 public class UserResources {
 

@@ -72,9 +72,10 @@ public class MapResourcesTest {
 
     @Test
     public void queryIgnoreCase() {
-        Long resultsUpperCase = resource.getObservations(null, null, "THALASSA").get("totalCount").getAsLong();
-        Long resultsLowerCases = resource.getObservations(null, null, "thalassa").get("totalCount").getAsLong();
-        Long resultsMixedCases = resource.getObservations(null, null, "tHaLAsSa").get("totalCount").getAsLong();
+        JsonObject observations = resource.getObservations(null, null, "Borel");
+        Long resultsUpperCase = observations.get("totalCount").getAsLong();
+        Long resultsLowerCases = resource.getObservations(null, null, "borel").get("totalCount").getAsLong();
+        Long resultsMixedCases = resource.getObservations(null, null, "BorEL").get("totalCount").getAsLong();
 
         Assert.assertEquals(resultsUpperCase, resultsMixedCases);
         Assert.assertEquals(resultsUpperCase, resultsLowerCases);

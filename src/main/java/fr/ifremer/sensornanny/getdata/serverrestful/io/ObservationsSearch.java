@@ -10,11 +10,8 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.lang3.StringUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.FilterBuilder;
-import org.elasticsearch.index.query.FilterBuilders;
-import org.elasticsearch.index.query.GeoBoundingBoxFilterBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
@@ -35,6 +32,8 @@ import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
  *
  */
 public class ObservationsSearch {
+
+    private static final String EMPTY_STRING = "";
 
     private static final int PUBLIC_ACCESS_TYPE = 2;
 
@@ -63,8 +62,8 @@ public class ObservationsSearch {
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
-            GeoBoundingBoxFilterBuilder geoFilter = FilterBuilders.geoBoundingBoxFilter(ObservationsFields.COORDINATES)
-                    .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
+                    .getFrom().geohash()).topRight(query.getTo().geohash());
 
             // Add Range data
             searchRequest.setPostFilter(geoFilter);
@@ -108,8 +107,8 @@ public class ObservationsSearch {
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
-            GeoBoundingBoxFilterBuilder geoFilter = FilterBuilders.geoBoundingBoxFilter(ObservationsFields.COORDINATES)
-                    .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
+                    .getFrom().geohash()).topRight(query.getTo().geohash());
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
                     .subAggregation(geohashAggregation).filter(geoFilter));
         } else {
@@ -141,8 +140,8 @@ public class ObservationsSearch {
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
-            GeoBoundingBoxFilterBuilder geoFilter = FilterBuilders.geoBoundingBoxFilter(ObservationsFields.COORDINATES)
-                    .bottomLeft(query.getFrom().geohash()).topRight(query.getTo().geohash());
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
+                    .getFrom().geohash()).topRight(query.getTo().geohash());
 
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
                     .subAggregation(histogram).filter(geoFilter));
@@ -167,9 +166,9 @@ public class ObservationsSearch {
         BoolQueryBuilder boolQuery = boolQuery();
 
         // Add keywords fulltext search
-        if (StringUtils.isNotBlank(query.getKeywords())) {
-            boolQuery.must(queryStringQuery(query.getKeywords()).analyzer(STANDARD_TOKEN_ANALYZER).defaultOperator(
-                    Operator.AND));
+        String keywords = query.getKeywords();
+        if (keywords != null && !EMPTY_STRING.equals(keywords.trim())) {
+            boolQuery.must(queryStringQuery(keywords).analyzer(STANDARD_TOKEN_ANALYZER).defaultOperator(Operator.AND));
         }
         // Add range time search
         if (query.getTimeFrom() != null && query.getTimeTo() != null) {
@@ -179,11 +178,12 @@ public class ObservationsSearch {
 
         // If the user filter is enabled filter the result otherwise only execute request
         if (Config.userFilterEnabled()) {
-            FilterBuilder permissionFilter = createFilterPermission();
+            QueryBuilder permissionFilter = createFilterPermission();
             if (boolQuery.hasClauses()) {
-                searchRequest.setQuery(QueryBuilders.filteredQuery(boolQuery, permissionFilter));
+                searchRequest.setQuery(QueryBuilders.boolQuery().must(boolQuery).filter(permissionFilter));
             } else {
-                searchRequest.setQuery(QueryBuilders.filteredQuery(QueryBuilders.matchAllQuery(), permissionFilter));
+                searchRequest.setQuery(QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery()).filter(
+                        permissionFilter));
             }
         } else if (boolQuery.hasClauses()) {
             searchRequest.setQuery(boolQuery);
@@ -195,20 +195,20 @@ public class ObservationsSearch {
     /**
      * This method create a filter on data using permissions and current user
      */
-    private FilterBuilder createFilterPermission() {
+    private QueryBuilder createFilterPermission() {
         User currentUser = CurrentUserProvider.get();
         // Is Public
-        FilterBuilder publicFilter = FilterBuilders.termFilter("snanny-access-type", PUBLIC_ACCESS_TYPE);
+        QueryBuilder publicFilter = QueryBuilders.termQuery("snanny-access-type", PUBLIC_ACCESS_TYPE);
 
         // If current user exist result will be is public or isAuthor or is shared
         if (currentUser != null && !Role.ADMIN.equals(currentUser.getRole())) {
-            return FilterBuilders.boolFilter().should(
+            return QueryBuilders.boolQuery()
                     /** Should be public */
-                    publicFilter,
+                    .should(publicFilter)
                     /** Should be author */
-                    FilterBuilders.termFilter("snanny-author", currentUser.getLogin()),
+                    .should(QueryBuilders.termQuery("snanny-author", currentUser.getLogin()))
                     /** Should be shared with current user */
-                    FilterBuilders.termFilter("snanny-access-auth", currentUser.getLogin()));
+                    .should(QueryBuilders.termQuery("snanny-access-auth", currentUser.getLogin()));
         }
         return publicFilter;
 

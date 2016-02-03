@@ -1,5 +1,7 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -8,7 +10,6 @@ import javax.servlet.ServletContextListener;
 
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 
@@ -31,30 +32,27 @@ public class NodeManager implements ServletContextListener {
 
     private static final Logger LOGGER = Logger.getLogger(NodeManager.class.getName());
 
-    private static Settings clientSettings;
-
     private static TransportClient client;
-
-    public NodeManager() {
-        extractClientSettings();
-    }
 
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         LOGGER.log(Level.INFO, "Connecting to ElasticSearch Cluster");
-        extractClientSettings();
+        try {
+            extractClientSettings();
+        } catch (UnknownHostException e) {
+            throw new IllegalStateException("Unable to load Node manager", e);
+        }
     }
 
-    private void extractClientSettings() {
-        if (clientSettings == null) {
-            clientSettings = ImmutableSettings.settingsBuilder().put(CLUSTER_NAME, Config.clusterName())
-                    .put(CLIENT_TRANSPORT_SNIFF, true).build();
+    private void extractClientSettings() throws UnknownHostException {
+        Settings settings = Settings.builder().put(CLUSTER_NAME, Config.clusterName()).put(CLIENT_TRANSPORT_SNIFF, true)
+                .build();
 
-            client = new TransportClient(clientSettings);
-            String[] nodes = Config.clusterHosts();
-            for (String host : nodes) {
-                client.addTransportAddress(new InetSocketTransportAddress(host, ELASTICSEARCH_TRANSPORT_PORT));
-            }
+        client = new TransportClient.Builder().settings(settings).build();
+        String[] nodes = Config.clusterHosts();
+        for (String host : nodes) {
+            client.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(host),
+                    ELASTICSEARCH_TRANSPORT_PORT));
         }
     }
 

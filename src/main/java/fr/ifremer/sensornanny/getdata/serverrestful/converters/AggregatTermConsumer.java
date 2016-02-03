@@ -18,7 +18,7 @@ public class AggregatTermConsumer extends AbstractAggregatConsumer<Bucket> {
     @Override
     protected JsonObject createJSonElement(Bucket t) {
         JsonObject element = new JsonObject();
-        element.addProperty(KEY_PROPERTY, t.getKey());
+        element.addProperty(KEY_PROPERTY, t.getKey().toString());
         element.addProperty(COUNT_PROPERTY, t.getDocCount());
         return element;
     }
