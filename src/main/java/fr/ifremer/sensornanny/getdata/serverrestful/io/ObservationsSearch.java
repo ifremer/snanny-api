@@ -17,6 +17,7 @@ import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
+import org.joda.time.DateTime;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
@@ -136,7 +137,7 @@ public class ObservationsSearch {
         long interval = Config.syntheticViewTimeSize() * DAYS_IN_MILLIS;
         DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
                 ObservationsFields.RESULTTIMESTAMP).interval(interval).minDocCount(0).extendedBounds(Config
-                        .syntheticTimelineMinDate(), null);
+                        .syntheticTimelineMinDate(), DateTime.now().getMillis());
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
