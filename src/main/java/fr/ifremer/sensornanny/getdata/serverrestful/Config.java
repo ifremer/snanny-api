@@ -110,10 +110,6 @@ public class Config {
         return getInt("es.syntheticViewBinElements");
     }
 
-    public static long syntheticTimelineMinDate() {
-        return getLong("es.syntheticTimelineMinDate");
-    }
-
     /**
      * Bucket size of time aggregat
      * 
