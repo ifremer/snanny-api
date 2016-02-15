@@ -91,6 +91,7 @@
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
 			<version>${servlet.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
@@ -109,6 +110,13 @@
 		    <groupId>org.jasig.cas.client</groupId>
 		    <artifactId>cas-client-core</artifactId>
 		    <version>${cas.client.version}</version>
+		    <exclusions>
+		    	<exclusion>
+			    	<groupId>javax.servlet</groupId>
+					<artifactId>javax.servlet-api</artifactId>
+				</exclusion>
+		    </exclusions>
+		    
 		</dependency>
 
 		<!-- Test dependencies -->
@@ -124,8 +132,6 @@
 			<version>${easymock.version}</version>
 			<scope>test</scope>
 		</dependency>
-
-
 	</dependencies>
 
 </project>
