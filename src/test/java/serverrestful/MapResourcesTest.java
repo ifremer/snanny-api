@@ -34,12 +34,12 @@ public class MapResourcesTest {
     @Test
     public void testGetGrid() {
 
-        JsonObject map = (JsonObject) resource.getObservationsMap("-180.00,-90.74,180.74,80.35", null, null);
+        JsonObject map = (JsonObject) resource.getObservations("-180.00,-90.74,180.74,80.35", null, null);
 
         System.out.println(map.get("totalCount"));
 
         AssertionHolder.setAssertion(new FakeAssertion("admin"));
-        map = (JsonObject) resource.getObservationsMap("-180.00,-90.74,180.74,80.35", null, null);
+        map = (JsonObject) resource.getObservations("-180.00,-90.74,180.74,80.35", null, null);
 
         System.out.println(map.get("totalCount"));
     }
