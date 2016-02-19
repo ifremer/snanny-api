@@ -33,6 +33,12 @@ import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
  */
 public class ObservationsSearch {
 
+    private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
+
+    private static final String SNANNY_AUTHOR = "doc.snanny-author";
+
+    private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
+
     private static final String EMPTY_STRING = "";
 
     private static final int PUBLIC_ACCESS_TYPE = 2;
@@ -188,6 +194,7 @@ public class ObservationsSearch {
             searchRequest.setQuery(boolQuery);
         }
 
+        System.out.println(searchRequest);
         return searchRequest;
     }
 
@@ -197,7 +204,7 @@ public class ObservationsSearch {
     private QueryBuilder createFilterPermission() {
         User currentUser = CurrentUserProvider.get();
         // Is Public
-        QueryBuilder publicFilter = QueryBuilders.termQuery("snanny-access-type", PUBLIC_ACCESS_TYPE);
+        QueryBuilder publicFilter = QueryBuilders.termQuery(SNANNY_ACCESS, PUBLIC_ACCESS_TYPE);
 
         // If current user exist result will be is public or isAuthor or is shared
         if (currentUser != null && !Role.ADMIN.equals(currentUser.getRole())) {
@@ -205,11 +212,11 @@ public class ObservationsSearch {
                     /** Should be public */
                     .should(publicFilter)
                     /** Should be author */
-                    .should(QueryBuilders.termQuery("snanny-author", currentUser.getLogin()))
+                    .should(QueryBuilders.termQuery(SNANNY_AUTHOR, currentUser.getLogin()))
                     /** Should be shared with current user */
-                    .should(QueryBuilders.termQuery("snanny-access-auth", currentUser.getLogin()));
+                    .should(QueryBuilders.termQuery(SNANNY_SHARE_AUTH, currentUser.getLogin()));
         }
-        return publicFilter;
+        return QueryBuilders.boolQuery().should(publicFilter);
 
     }
 }
