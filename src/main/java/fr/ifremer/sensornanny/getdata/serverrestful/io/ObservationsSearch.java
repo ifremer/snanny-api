@@ -1,5 +1,9 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
+import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
+
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
@@ -21,8 +25,6 @@ import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
 
 import java.util.concurrent.TimeUnit;
-
-import static org.elasticsearch.index.query.QueryBuilders.*;
 
 /**
  * This class allow access to elasticsearch observations databases
