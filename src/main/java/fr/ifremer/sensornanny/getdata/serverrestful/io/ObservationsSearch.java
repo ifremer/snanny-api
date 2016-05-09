@@ -1,11 +1,13 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
-import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
-
-import java.util.concurrent.TimeUnit;
-
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
+import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
+import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
+import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -18,20 +20,18 @@ import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
 
-import fr.ifremer.sensornanny.getdata.serverrestful.Config;
-import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
-import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
-import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
-import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
-import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
+import java.util.concurrent.TimeUnit;
+
+import static org.elasticsearch.index.query.QueryBuilders.*;
 
 /**
  * This class allow access to elasticsearch observations databases
- * 
- * @author athorel
  *
+ * @author athorel
  */
 public class ObservationsSearch {
+
+    private static final Log LOGGER = LogFactory.getLog(ObservationsSearch.class);
 
     private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
 
@@ -43,11 +43,11 @@ public class ObservationsSearch {
 
     private static final int PUBLIC_ACCESS_TYPE = 2;
 
-    private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[] { "meta.*" };
+    private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[]{"meta.*"};
 
-    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[] { "doc.snanny-uuid",
+    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[]{"doc.snanny-uuid",
             "doc.snanny-ancestors.snanny-ancestor-name", "doc.snanny-ancestors.snanny-ancestor-uuid", "doc.snanny-name",
-            "doc.snanny-coordinates" };
+            "doc.snanny-coordinates"};
 
     private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
@@ -57,7 +57,7 @@ public class ObservationsSearch {
 
     /**
      * Get a page of observations from a query
-     * 
+     *
      * @param query geoboxing, timeboxing and keywords parameters
      * @return response containing the first page of observations using #ElasticConfiguration.scrollPagination()
      */
@@ -69,7 +69,7 @@ public class ObservationsSearch {
 
             // Prepare geo filter
             QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom().geohash()).topRight(query.getTo().geohash());
+                    .getFrom()).topRight(query.getTo());
 
             // Add Range data
             searchRequest.setPostFilter(geoFilter);
@@ -85,7 +85,7 @@ public class ObservationsSearch {
     /**
      * Get a page of observations from a scrollId, keep the query parameters and request the next X elements from the
      * last cursor
-     * 
+     *
      * @param scrollId scroll identifier
      * @return response containing the X next elements
      */
@@ -99,9 +99,8 @@ public class ObservationsSearch {
 
     /**
      * Get GeoJSON object representing ths aggregations for specific observation query
-     * 
+     *
      * @param query search in term, time, and geobox
-     * 
      * @return aggregations of documents limited by the query in zones
      */
     public SearchResponse getMap(ObservationQuery query, int precision) {
@@ -114,7 +113,7 @@ public class ObservationsSearch {
 
             // Prepare geo filter
             QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom().geohash()).topRight(query.getTo().geohash());
+                    .getFrom()).topRight(query.getTo());
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
                     .subAggregation(geohashAggregation).filter(geoFilter));
         } else {
@@ -123,16 +122,20 @@ public class ObservationsSearch {
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
 
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug(searchRequest);
+        }
+
         // Get aggregation Map only
         return searchRequest.setSize(0).execute().actionGet();
     }
 
     /**
      * Return the timeline aggregation for specified request query
-     * 
+     *
      * @param query search in term, time, and geobox
      * @return timeline aggregation with specified interval {@link Config#syntheticViewTimeSize()} *
-     *         {@value #DAYS_IN_MILLIS}
+     * {@value #DAYS_IN_MILLIS}
      */
     public SearchResponse getTimeline(ObservationQuery query) {
 
@@ -146,7 +149,7 @@ public class ObservationsSearch {
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
             QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom().geohash()).topRight(query.getTo().geohash());
+                    .getFrom()).topRight(query.getTo());
 
             searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
                     .subAggregation(histogram).filter(geoFilter));
@@ -159,7 +162,7 @@ public class ObservationsSearch {
 
     /**
      * This method create a query with the observation query element
-     * 
+     *
      * @param query observation query
      * @return requestbuilder to complete and execute
      */
@@ -194,7 +197,6 @@ public class ObservationsSearch {
             searchRequest.setQuery(boolQuery);
         }
 
-        System.out.println(searchRequest);
         return searchRequest;
     }
 
@@ -207,14 +209,18 @@ public class ObservationsSearch {
         QueryBuilder publicFilter = QueryBuilders.termQuery(SNANNY_ACCESS, PUBLIC_ACCESS_TYPE);
 
         // If current user exist result will be is public or isAuthor or is shared
-        if (currentUser != null && !Role.ADMIN.equals(currentUser.getRole())) {
-            return QueryBuilders.boolQuery()
-                    /** Should be public */
-                    .should(publicFilter)
-                    /** Should be author */
-                    .should(QueryBuilders.termQuery(SNANNY_AUTHOR, currentUser.getLogin()))
-                    /** Should be shared with current user */
-                    .should(QueryBuilders.termQuery(SNANNY_SHARE_AUTH, currentUser.getLogin()));
+        if (currentUser != null) {
+            if (!Role.ADMIN.equals(currentUser.getRole())) {
+                return QueryBuilders.boolQuery()
+                        /** Should be public */
+                        .should(publicFilter)
+                                /** Should be author */
+                        .should(QueryBuilders.termQuery(SNANNY_AUTHOR, currentUser.getLogin()))
+                                /** Should be shared with current user */
+                        .should(QueryBuilders.termQuery(SNANNY_SHARE_AUTH, currentUser.getLogin()));
+            } else if (Role.ADMIN.equals(currentUser.getRole())) {
+                return QueryBuilders.matchAllQuery();
+            }
         }
         return QueryBuilders.boolQuery().should(publicFilter);
 
