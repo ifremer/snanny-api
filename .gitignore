@@ -4,3 +4,8 @@
 /.project
 /.classpath
 /.settings/*
+
+# other
+*.iml
+dependency-reduced-pom.xml
+.idea/
