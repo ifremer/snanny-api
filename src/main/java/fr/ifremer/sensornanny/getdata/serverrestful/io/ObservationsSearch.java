@@ -47,9 +47,9 @@ public class ObservationsSearch {
 
     private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[]{"meta.*"};
 
-    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[]{"doc.snanny-uuid",
-            "doc.snanny-ancestors.snanny-ancestor-name", "doc.snanny-ancestors.snanny-ancestor-uuid", "doc.snanny-name",
-            "doc.snanny-coordinates"};
+    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[]{"doc.snanny-uuid", "doc.snanny-deploymentid",
+            "doc.snanny-ancestors.snanny-ancestor-name", "doc.snanny-ancestors.snanny-ancestor-uuid",
+            "doc.snanny-ancestors.snanny-ancestor-deploymentid", "doc.snanny-name", "doc.snanny-coordinates"};
 
     private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
