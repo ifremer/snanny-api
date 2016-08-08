@@ -61,8 +61,9 @@ public class LogoutFilter extends AbstractCasFilter {
         final HttpSession session = request.getSession(false);
         // Check unregister fct
         final String serviceUrl = request.getParameter("bf");
-
-        session.removeAttribute(CONST_CAS_ASSERTION);
+        if(session != null) {
+            session.removeAttribute(CONST_CAS_ASSERTION);
+        }
 
         final String urlToRedirectTo = CommonUtils.constructRedirectUrl(this.casServerLogoutUrl,
                 getServiceParameterName(), serviceUrl, false, false);
