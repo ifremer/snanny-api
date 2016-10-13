@@ -141,6 +141,15 @@ public class Config {
     }
 
     /**
+     * Service endpoint to retrieve sml informations
+     *
+     * @return service endpoint
+     */
+    public static String smlEndpoint() {
+        return get("sml.endpoint");
+    }
+
+    /**
      * List of administrators
      * 
      * @return array of hosts

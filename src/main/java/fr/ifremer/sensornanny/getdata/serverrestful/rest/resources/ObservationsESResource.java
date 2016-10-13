@@ -9,6 +9,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import com.google.gson.JsonPrimitive;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
@@ -30,6 +31,8 @@ import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
 import fr.ifremer.sensornanny.getdata.serverrestful.transform.GeoAggregatToGridTransformer;
 import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.*;
+
 @Path(ObservationsESResource.PATH)
 public class ObservationsESResource {
 
@@ -37,18 +40,6 @@ public class ObservationsESResource {
     private static final double GEOHASH_6 = 1.2;
 
     private static final double GEOHASH_5 = 5;
-
-    private static final String SCROLL_PROPERTY = "scroll";
-
-    private static final String STATUS_PROPERTY = "status";
-
-    private static final String FEATURE_COLLECTION_VALUE = "FeatureCollection";
-
-    private static final String FEATURES_PROPERTY = "features";
-
-    private static final String TOTAL_COUNT_PROPERTY = "totalCount";
-
-    private static final String TYPE_PROPERTY = "type";
 
     private static final Logger LOGGER = Logger.getLogger(ObservationsESResource.class.getName());
 
@@ -95,18 +86,18 @@ public class ObservationsESResource {
                     @Override
                     public void accept(SearchHit t) {
 
-                        JsonObject fromJson = (JsonObject) parser.parse(t.getSourceAsString()).getAsJsonObject().get(
-                                "doc");
+                        JsonObject fromJson = parser.parse(t.getSourceAsString()).getAsJsonObject();
                         JsonObject geometry = new JsonObject();
                         JsonObject ret = new JsonObject();
 
                         ret.add("properties", fromJson);
                         ret.add("geometry", geometry);
                         geometry.addProperty("type", "Point");
-                        JsonObject coordinates = (JsonObject) fromJson.get("snanny-coordinates");
+                        String coordinates = fromJson.get("snanny-coordinates").getAsString();
+                        String[] coords = coordinates.split(",");
                         JsonArray coordinatesArr = new JsonArray();
-                        coordinatesArr.add(coordinates.get("lon"));
-                        coordinatesArr.add(coordinates.get("lat"));
+                        coordinatesArr.add(new JsonPrimitive(coords[1]));
+                        coordinatesArr.add(new JsonPrimitive(coords[0]));
                         geometry.add("coordinates", coordinatesArr);
 
                         fromJson.remove("snanny-coordinates");

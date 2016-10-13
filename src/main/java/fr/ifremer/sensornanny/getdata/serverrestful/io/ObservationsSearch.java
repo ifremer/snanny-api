@@ -1,5 +1,6 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
@@ -16,13 +17,14 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
 import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
+import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
 
 import java.util.concurrent.TimeUnit;
 
@@ -47,9 +49,9 @@ public class ObservationsSearch {
 
     private static final String[] EXCLUDE_OBSERVATION_FIELDS = new String[]{"meta.*"};
 
-    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[]{"doc.snanny-uuid", "doc.snanny-deploymentid",
-            "doc.snanny-ancestors.snanny-ancestor-name", "doc.snanny-ancestors.snanny-ancestor-uuid",
-            "doc.snanny-ancestors.snanny-ancestor-deploymentid", "doc.snanny-name", "doc.snanny-coordinates"};
+    private static final String[] EXPORT_OBSERVATIONS_FIELDS = new String[]{"snanny-uuid", "snanny-deploymentid",
+            "snanny-ancestors.snanny-ancestor-name", "snanny-ancestors.snanny-ancestor-uuid",
+            "snanny-ancestors.snanny-ancestor-deploymentid", "snanny-name", "snanny-coordinates"};
 
     private static final String STANDARD_TOKEN_ANALYZER = "standard";
 
@@ -145,8 +147,9 @@ public class ObservationsSearch {
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         long interval = Config.syntheticViewTimeSize() * DAYS_IN_MILLIS;
-        DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE).field(
-                ObservationsFields.RESULTTIMESTAMP).interval(interval).minDocCount(0);
+        DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE)
+                .field(ObservationsFields.RESULTTIMESTAMP)
+                .interval(interval).minDocCount(0);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
@@ -227,4 +230,47 @@ public class ObservationsSearch {
         return QueryBuilders.boolQuery().should(publicFilter);
 
     }
+
+    public SearchResponse getSystems(ObservationQuery query) {
+
+        SearchRequestBuilder searchRequest = createQuery(query);
+
+        TermsBuilder terms = AggregationBuilders.terms(AGGREGAT_TERM).field(SNANNY_ANCESTORS + "." + SNANNY_ANCESTOR_UUID);
+        addAggregationsInTerm(terms, SNANNY_ANCESTOR_NAME, SNANNY_ANCESTOR_DEPLOYMENTID, SNANNY_ANCESTOR_DESCRIPTION, SNANNY_ANCESTOR_TERMS);
+
+        NestedBuilder nested = AggregationBuilders.nested(AGGREGAT).path(SNANNY_ANCESTORS).subAggregation(terms);
+
+        if (query.getFrom() != null && query.getTo() != null) {
+
+            // Prepare geo filter
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(COORDINATES).bottomLeft(query
+                    .getFrom()).topRight(query.getTo());
+
+            // Add Range data
+            searchRequest.setPostFilter(geoFilter);
+        }
+
+        searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
+                .setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS)
+                .addAggregation(nested).setSize(0);
+
+        return searchRequest.execute().actionGet();
+    }
+
+    public SearchResponse getSystemsByField(String id, String field) {
+        SearchRequestBuilder requestBuilder = nodeManager.getClient().prepareSearch(Config.observationsIndex());
+
+        requestBuilder.setQuery(QueryBuilders.nestedQuery(ObservationsFields.SNANNY_ANCESTORS, QueryBuilders.boolQuery().must(QueryBuilders.matchQuery(field, id))));
+        requestBuilder.setSize(1);
+
+        return requestBuilder.execute().actionGet();
+    }
+
+    private void addAggregationsInTerm(AggregationBuilder aggBuilder, String... aggregationsName) {
+        for(String aggName : aggregationsName) {
+            AggregationBuilder agg = AggregationBuilders.terms(aggName).field(SNANNY_ANCESTORS + "." + aggName);
+            aggBuilder.subAggregation(agg);
+        }
+    }
+
 }
