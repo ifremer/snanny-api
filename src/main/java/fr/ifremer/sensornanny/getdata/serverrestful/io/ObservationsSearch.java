@@ -1,6 +1,7 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.SYSTEMS_HASDATA;
 import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
 import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
@@ -37,11 +38,11 @@ public class ObservationsSearch {
 
     private static final Log LOGGER = LogFactory.getLog(ObservationsSearch.class);
 
-    private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
+    private static final String SNANNY_SHARE_AUTH = "snanny-access.snanny-access-auth";
 
-    private static final String SNANNY_AUTHOR = "doc.snanny-author";
+    private static final String SNANNY_AUTHOR = "snanny-author";
 
-    private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
+    private static final String SNANNY_ACCESS = "snanny-access.snanny-access-type";
 
     private static final String EMPTY_STRING = "";
 
@@ -141,9 +142,13 @@ public class ObservationsSearch {
      * @return timeline aggregation with specified interval {@link Config#syntheticViewTimeSize()} *
      * {@value #DAYS_IN_MILLIS}
      */
-    public SearchResponse getTimeline(ObservationQuery query) {
+    public SearchResponse getTimeline(ObservationQuery query, Boolean hasCoords) {
 
         SearchRequestBuilder searchRequest = createQuery(query);
+
+        if(hasCoords == null || (hasCoords != null && hasCoords)){
+            searchRequest.setQuery(QueryBuilders.existsQuery(ObservationsFields.COORDINATES));
+        }
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         long interval = Config.syntheticViewTimeSize() * DAYS_IN_MILLIS;
@@ -262,6 +267,19 @@ public class ObservationsSearch {
 
         requestBuilder.setQuery(QueryBuilders.nestedQuery(ObservationsFields.SNANNY_ANCESTORS, QueryBuilders.boolQuery().must(QueryBuilders.matchQuery(field, id))));
         requestBuilder.setSize(1);
+
+        return requestBuilder.execute().actionGet();
+    }
+
+    public SearchResponse getSystemsWithData(String hasData) {
+        SearchRequestBuilder requestBuilder = nodeManager.getClient().prepareSearch(Config.systemsIndex());
+
+        if(hasData == null){
+            requestBuilder.setQuery(QueryBuilders.matchAllQuery());
+        } else {
+            Boolean withData = Boolean.parseBoolean(hasData);
+            requestBuilder.setQuery(QueryBuilders.matchQuery(SYSTEMS_HASDATA, withData));
+        }
 
         return requestBuilder.execute().actionGet();
     }

@@ -9,17 +9,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import com.google.gson.JsonPrimitive;
+import com.google.gson.*;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.bucket.filter.InternalFilter;
 import org.elasticsearch.search.aggregations.bucket.geogrid.InternalGeoHashGrid;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.GeoConstants;
@@ -40,6 +36,8 @@ public class ObservationsESResource {
     private static final double GEOHASH_6 = 1.2;
 
     private static final double GEOHASH_5 = 5;
+
+    private static final String GEOPOS_WITHOUT_COORDS = "0,200";
 
     private static final Logger LOGGER = Logger.getLogger(ObservationsESResource.class.getName());
 
@@ -62,50 +60,27 @@ public class ObservationsESResource {
             @QueryParam("kwords") String keywordsQuery) {
 
         JsonObject result = new JsonObject();
-        ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
+        ObservationQuery queryWithCoords = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
+
         long beginTime = System.currentTimeMillis();
-        Long hits = null;
+        Long hitsWithCoords = null;
         try {
-            SearchResponse observations = elasticDb.getObservations(query);
+            SearchResponse observations = elasticDb.getObservations(queryWithCoords);
 
             result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
             JsonArray arr = new JsonArray();
             result.add(FEATURES_PROPERTY, arr);
 
-            hits = observations.getHits().getTotalHits();
-            result.addProperty(TOTAL_COUNT_PROPERTY, hits);
-            if (hits == 0) {
+            hitsWithCoords = observations.getHits().getTotalHits();
+
+            result.addProperty(TOTAL_COUNT_PROPERTY, hitsWithCoords);
+            if (hitsWithCoords == 0) {
                 result.addProperty(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
-            } else if (hits > Config.aggregationLimit()) {
+            } else if (hitsWithCoords > Config.aggregationLimit()) {
                 result.addProperty(STATUS_PROPERTY, RequestStatuts.TOOMANY.toString());
             } else {
                 result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
-                JsonParser parser = new JsonParser();
-                observations.getHits().forEach(new Consumer<SearchHit>() {
-
-                    @Override
-                    public void accept(SearchHit t) {
-
-                        JsonObject fromJson = parser.parse(t.getSourceAsString()).getAsJsonObject();
-                        JsonObject geometry = new JsonObject();
-                        JsonObject ret = new JsonObject();
-
-                        ret.add("properties", fromJson);
-                        ret.add("geometry", geometry);
-                        geometry.addProperty("type", "Point");
-                        String coordinates = fromJson.get("snanny-coordinates").getAsString();
-                        String[] coords = coordinates.split(",");
-                        JsonArray coordinatesArr = new JsonArray();
-                        coordinatesArr.add(new JsonPrimitive(coords[1]));
-                        coordinatesArr.add(new JsonPrimitive(coords[0]));
-                        geometry.add("coordinates", coordinatesArr);
-
-                        fromJson.remove("snanny-coordinates");
-
-                        arr.add(ret);
-
-                    }
-                });
+                arr.addAll(createObservationsResult(observations));
                 // Has more data
                 if (arr.size() >= Config.scrollPagination()) {
                     result.addProperty(SCROLL_PROPERTY, observations.getScrollId());
@@ -119,12 +94,70 @@ public class ObservationsESResource {
 
         if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
-            String numberOfHits = (hits == null) ? "NaN" : hits.toString();
+            String numberOfHits = (hitsWithCoords == null) ? "NaN" : hitsWithCoords.toString();
             String scroll = result.get(SCROLL_PROPERTY) != null ? result.get(SCROLL_PROPERTY).getAsString() : "No";
             LOGGER.info(String.format(
                     "Retrieve Observations using query : %s\n\tResult :{status: '%s', found: '%s', took '%dms', scroll:'%s'}",
-                    query, result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
+                    queryWithCoords, result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
 
+        }
+
+        return result;
+
+    }
+
+
+    /**
+     * Get list of observations
+     *
+     * @param timeQuery timeQuery with [FromDate,ToDate]
+     * @param keywordsQuery query with keywords elements (allow multi term : termA 2011,termB 2012
+     *
+     * @return list of observation in JSON format
+     */
+    @GET
+    @Path("withoutgeo")
+    @Produces(MediaType.APPLICATION_JSON)
+    public JsonObject getObservationsWithoutData(@QueryParam("time") String timeQuery, @QueryParam("kwords") String keywordsQuery) {
+
+        JsonObject result = new JsonObject();
+        ObservationQuery queryWithoutCoords = QueryResolver.resolveQueryObservation(null, timeQuery, keywordsQuery);
+
+        long beginTime = System.currentTimeMillis();
+        Long hitsWithoutCoords = null;
+        try {
+            SearchResponse observationsWithoutCoords = elasticDb.getObservations(queryWithoutCoords);
+
+            result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
+            JsonArray arr = new JsonArray();
+            result.add(FEATURES_PROPERTY, arr);
+
+            hitsWithoutCoords = observationsWithoutCoords.getHits().getTotalHits();
+
+            result.addProperty(TOTAL_COUNT_PROPERTY, hitsWithoutCoords);
+            if (hitsWithoutCoords == 0) {
+                result.addProperty(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
+            } else {
+                result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
+                arr.addAll(createObservationsResult(observationsWithoutCoords));
+                // Has more data
+                if (arr.size() >= Config.scrollPagination()) {
+                    result.addProperty(SCROLL_PROPERTY, observationsWithoutCoords.getScrollId());
+                }
+            }
+        } catch (ElasticsearchException e) {
+            // Query timeout exception
+            e.printStackTrace();
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.TIMEOUT.toString());
+        }
+
+        if (Config.debug()) {
+            long tookTime = System.currentTimeMillis() - beginTime;
+            String numberOfHits = (hitsWithoutCoords == null) ? "NaN" : hitsWithoutCoords.toString();
+            String scroll = result.get(SCROLL_PROPERTY).isJsonNull() ? "No" : result.get(SCROLL_PROPERTY).getAsString();
+            LOGGER.info(String.format(
+                    "Retrieve Observations using query : %s\n\tResult :{status: '%s', found: '%s', took '%dms', scroll:'%s'}",
+                    queryWithoutCoords, result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
         }
 
         return result;
@@ -276,10 +309,11 @@ public class ObservationsESResource {
     @Path("synthetic/timeline")
     @Produces(MediaType.APPLICATION_JSON)
     public Object getObservationsTime(@QueryParam("bbox") String bboxQuery,
-            @QueryParam("kwords") String keywordsQuery) {
+            @QueryParam("kwords") String keywordsQuery, @QueryParam("hasCoords") Boolean hasCoords) {
         long beginTime = System.currentTimeMillis();
         ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, null, keywordsQuery);
-        SearchResponse response = elasticDb.getTimeline(query);
+
+        SearchResponse response = elasticDb.getTimeline(query, hasCoords);
 
         // Get Geo Aggregats
         InternalFilter internalFilter = response.getAggregations().get(
@@ -301,6 +335,46 @@ public class ObservationsESResource {
         }
 
         return aggregatTimeConsumer.getResult();
+    }
+
+    private JsonArray createObservationsResult(SearchResponse observations) {
+        JsonArray arr = new JsonArray();
+        JsonParser parser = new JsonParser();
+        observations.getHits().forEach(new Consumer<SearchHit>() {
+
+            @Override
+            public void accept(SearchHit t) {
+
+                JsonObject fromJson = parser.parse(t.getSourceAsString()).getAsJsonObject();
+                JsonObject geometry = new JsonObject();
+                JsonObject ret = new JsonObject();
+
+                ret.add("properties", fromJson);
+                ret.add("geometry", geometry);
+                geometry.addProperty("type", "Point");
+                JsonElement coord = fromJson.get("snanny-coordinates");
+                JsonArray coordinatesArr = new JsonArray();
+                String[] coords;
+                if(!coord.isJsonNull()) {
+                    String coordinates = coord.getAsString();
+                    coords = coordinates.split(",");
+                    coordinatesArr.add(new JsonPrimitive(coords[1]));
+                    coordinatesArr.add(new JsonPrimitive(coords[0]));
+                } else {
+                    coords = GEOPOS_WITHOUT_COORDS.split(",");
+                    coordinatesArr.add(new JsonPrimitive(coords[1]));
+                    coordinatesArr.add(new JsonPrimitive(coords[0]));
+                }
+                geometry.add("coordinates", coordinatesArr);
+
+                fromJson.remove("snanny-coordinates");
+
+                arr.add(ret);
+
+            }
+        });
+
+        return arr;
     }
 
 }

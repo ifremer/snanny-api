@@ -64,6 +64,15 @@ public class Config {
     }
 
     /**
+     * Index elastic search on systems
+     *
+     * @return indexName
+     */
+    public static String systemsIndex() {
+        return get("es.index.systems");
+    }
+
+    /**
      * Time in millis while elastic scroll index is kept alive
      * See https://www.elastic.co/guide/en/elasticsearch/reference/current/search-request-scroll.html
      * 

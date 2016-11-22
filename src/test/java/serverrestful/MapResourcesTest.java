@@ -46,7 +46,7 @@ public class MapResourcesTest {
 
     @Test
     public void testGetTimeLine() {
-        Object result = resource.getObservationsTime("-76.44,-150.03,76.44,150.03", null);
+        Object result = resource.getObservationsTime("-76.44,-150.03,76.44,150.03", null, null);
         System.out.println(result);
     }
 

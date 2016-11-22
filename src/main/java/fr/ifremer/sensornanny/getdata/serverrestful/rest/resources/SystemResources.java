@@ -181,6 +181,44 @@ public class SystemResources {
         return result;
     }
 
+    /**
+     * Pour récuperer les systèmes indexés dans snanny-systems, avec la possibilité de filtrer par systèmes ayant des données ou non.
+     * @param hasData
+     * @return
+     */
+    @GET
+    @Path("/all")
+    @Produces(MediaType.APPLICATION_JSON)
+    public JsonObject getSystemsWithData(@QueryParam("hasdata") String hasData) {
+        JsonObject result = new JsonObject();
+        long beginTime = System.currentTimeMillis();
+
+        SearchResponse observations = elasticDb.getSystemsWithData(hasData);
+
+        JsonArray arr = new JsonArray();
+
+        Long hits = observations.getHits().getTotalHits();
+        if (hits == 0) {
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
+        } else {
+            result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
+
+            observations.getHits().forEach(hit -> arr.add(parser.parse(hit.getSourceAsString()).getAsJsonObject()));
+
+            result.add(SYSTEM_PROPERTY, arr);
+        }
+
+        if (Config.debug()) {
+            long tookTime = System.currentTimeMillis() - beginTime;
+            String numberOfHits = (hits == null) ? "NaN" : hits.toString();
+            LOGGER.info(String.format(
+                    "Retrieve Systems :\n\tResult :{status: '%s', found: '%s', took '%dms'}",
+                    result.get(STATUS_PROPERTY), numberOfHits, tookTime));
+
+        }
+        return result;
+    }
+
     private void createSystemObject(JsonArray array, SearchHit hit, String id, String field) {
 
         JsonObject input = parser.parse(hit.getSourceAsString()).getAsJsonObject();

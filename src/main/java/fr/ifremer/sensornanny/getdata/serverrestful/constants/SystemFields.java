@@ -21,4 +21,6 @@ public class SystemFields {
 
     public static final String SYSTEM_FILE = SYSTEM + "-file";
 
+    public static final String SYSTEMS_HASDATA = "snanny-systems-hasdata";
+
 }
