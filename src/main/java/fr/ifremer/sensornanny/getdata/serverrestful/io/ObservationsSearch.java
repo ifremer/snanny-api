@@ -2,9 +2,7 @@ package fr.ifremer.sensornanny.getdata.serverrestful.io;
 
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.SYSTEMS_HASDATA;
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.queryStringQuery;
-import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
@@ -14,6 +12,7 @@ import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.lucene.queryparser.xml.FilterBuilder;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -66,7 +65,7 @@ public class ObservationsSearch {
      * @param query geoboxing, timeboxing and keywords parameters
      * @return response containing the first page of observations using #ElasticConfiguration.scrollPagination()
      */
-    public SearchResponse getObservations(ObservationQuery query) {
+    public SearchResponse getObservations(ObservationQuery query, boolean hasCoords) {
 
         SearchRequestBuilder searchRequest = createQuery(query);
 
@@ -81,6 +80,10 @@ public class ObservationsSearch {
         }
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         searchRequest.setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS);
+        if(!hasCoords) {
+            MissingQueryBuilder filterBuilder = missingQuery(ObservationsFields.COORDINATES).nullValue(true);
+            searchRequest.setPostFilter(filterBuilder);
+        }
 
         // searchRequest.setScroll(ElasticConfiguration.scrollTimeout());
         return searchRequest.setFrom(0).setSize(Config.aggregationLimit()).execute().actionGet(Config.queryTimeout(),

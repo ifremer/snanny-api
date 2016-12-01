@@ -24,7 +24,7 @@ public class MapResourcesMockTest extends MockTest {
 
     @Test
     public void testEmptyObservations() {
-        expect(observationSearch.getObservations(anyObject(ObservationQuery.class))).andThrow(
+        expect(observationSearch.getObservations(anyObject(ObservationQuery.class), true)).andThrow(
                 new ElasticsearchException(""));
         replayAll();
         JsonObject observations = resource.getObservations("", "", "");

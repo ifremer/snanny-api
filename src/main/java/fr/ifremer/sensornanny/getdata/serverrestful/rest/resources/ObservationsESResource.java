@@ -65,7 +65,7 @@ public class ObservationsESResource {
         long beginTime = System.currentTimeMillis();
         Long hitsWithCoords = null;
         try {
-            SearchResponse observations = elasticDb.getObservations(queryWithCoords);
+            SearchResponse observations = elasticDb.getObservations(queryWithCoords, true);
 
             result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
             JsonArray arr = new JsonArray();
@@ -126,7 +126,7 @@ public class ObservationsESResource {
         long beginTime = System.currentTimeMillis();
         Long hitsWithoutCoords = null;
         try {
-            SearchResponse observationsWithoutCoords = elasticDb.getObservations(queryWithoutCoords);
+            SearchResponse observationsWithoutCoords = elasticDb.getObservations(queryWithoutCoords, false);
 
             result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
             JsonArray arr = new JsonArray();
@@ -154,7 +154,10 @@ public class ObservationsESResource {
         if (Config.debug()) {
             long tookTime = System.currentTimeMillis() - beginTime;
             String numberOfHits = (hitsWithoutCoords == null) ? "NaN" : hitsWithoutCoords.toString();
-            String scroll = result.get(SCROLL_PROPERTY).isJsonNull() ? "No" : result.get(SCROLL_PROPERTY).getAsString();
+            String scroll = "No";
+            if(result.get(SCROLL_PROPERTY) != null && !result.get(SCROLL_PROPERTY).isJsonNull()) {
+                scroll = result.get(SCROLL_PROPERTY).getAsString();
+            }
             LOGGER.info(String.format(
                     "Retrieve Observations using query : %s\n\tResult :{status: '%s', found: '%s', took '%dms', scroll:'%s'}",
                     queryWithoutCoords, result.get(STATUS_PROPERTY), numberOfHits, tookTime, scroll));
