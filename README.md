@@ -73,7 +73,7 @@ GET /api/rest/system/{uuid}
     This method return result when a uuid is part of the deployed system 
     For example a system with uuid can have many deployment 
     
-GET /api/rest/system/deployement/{uuid}_{startdate}_{enddate}
+GET /api/rest/system/deployement/{uuid}\_{startdate}\_{enddate}
     
     Retrieve a specific system information from its uuid and deployment date
     This method return the specific deployment of a system 
