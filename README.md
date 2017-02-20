@@ -58,9 +58,14 @@ GET /api/rest/obs/scroll?id=scrollId
 
 	scrollId : pagination identifier to retrieve next observations of a previous query
 	
-GET /api/rest/systems
+GET /api/rest/systems?bbox=lat1,lon2,lat2,lon2&time=begin,end&kwords=keyword
 
 	Get all the systems informations 
+	
+	lat1,lat2 : range from -90 to 90
+	lon1,lon2 : range from -180 to 180
+	begin,end : timestamp in ms
+	keyword : search keyword, each sequences separated by a comma
 	
 GET /api/rest/system/{uuid}
     
