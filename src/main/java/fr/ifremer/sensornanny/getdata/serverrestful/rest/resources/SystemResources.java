@@ -27,7 +27,6 @@ import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemField
 /**
  * Created by asi on 30/09/16.
  */
-@Path("/systems")
 public class SystemResources {
 
     private static final Logger LOGGER = Logger.getLogger(SystemResources.class.getName());
@@ -43,6 +42,7 @@ public class SystemResources {
      * Pour la liste, la liste peut prendre des critères spatio-temporelles, keywords qui s'applique sur les données émises par les systèmes où leurs enfants.
      * @return
      */
+    @Path("/systems")
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public JsonObject getSystems(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery, @QueryParam("kwords") String keywordsQuery) {
@@ -97,7 +97,7 @@ public class SystemResources {
      * @return
      */
     @GET
-    @Path("{uuid}")
+    @Path("/system/{uuid}")
     @Produces(MediaType.APPLICATION_JSON)
     public JsonObject getSystemsByUuid(@PathParam("uuid") String uuid) {
         JsonObject result = new JsonObject();
@@ -147,7 +147,7 @@ public class SystemResources {
      * @return
      */
     @GET
-    @Path("{uuid}_{startdate}_{enddate}")
+    @Path("/system/deployment/{uuid}_{startdate}_{enddate}")
     @Produces(MediaType.APPLICATION_JSON)
     public JsonObject getSystemsByDeploymentId(@PathParam("uuid") String uuid, @PathParam("startdate") String startdate, @PathParam("enddate") String enddate) {
         JsonObject result = new JsonObject();
