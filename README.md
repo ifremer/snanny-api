@@ -57,3 +57,18 @@ GET /api/rest/obs/scroll?id=scrollId
 	Configuration in individual.properties
 
 	scrollId : pagination identifier to retrieve next observations of a previous query
+	
+GET /api/rest/systems
+
+	Get all the systems informations 
+	
+GET /api/rest/system/{uuid}
+    
+    Retrieve all the system informations from its uuid
+    This method return result when a uuid is part of the deployed system 
+    For example a system with uuid can have many deployment 
+    
+GET /api/rest/system/deployement/{uuid}_{startdate}_{enddate}
+    
+    Retrieve a specific system information from its uuid and deployment date
+    This method return the specific deployment of a system 
