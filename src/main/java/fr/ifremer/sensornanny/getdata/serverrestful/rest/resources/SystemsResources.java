@@ -1,6 +1,8 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.rest.resources;
 
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.*;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.*;
 
 import java.util.List;
 import java.util.function.Consumer;
