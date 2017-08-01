@@ -28,8 +28,8 @@ public class AggregatTimeConsumer extends AbstractAggregatConsumer<InternalHisto
 
     @Override
     protected JsonObject createJSonElement(Bucket t) {
-
-        long longValue = ((org.joda.time.DateTime) t.getKey()).getMillis();
+    	
+        long longValue = Math.round((double)t.getKey());
         if (longValue < 0) {
             return null;
         }
