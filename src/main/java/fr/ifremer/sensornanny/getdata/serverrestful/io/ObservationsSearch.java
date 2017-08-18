@@ -40,10 +40,12 @@ public class ObservationsSearch {
 
     private static final Log LOGGER = LogFactory.getLog(ObservationsSearch.class);
 
+    // Le rajout du "doc." n'est plus necessaire avec le changement de version d'elasticsearch
+    //private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
+    //private static final String SNANNY_AUTHOR = "doc.snanny-author";
+    //private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
     private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
-
     private static final String SNANNY_AUTHOR = "doc.snanny-author";
-
     private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
 
     private static final String EMPTY_STRING = "";
