@@ -3,6 +3,7 @@ package fr.ifremer.sensornanny.getdata.serverrestful.util.query;
 import org.elasticsearch.common.geo.GeoPoint;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
+import org.elasticsearch.common.util.DoubleArray;
 
 /**
  * This class allow to resolve queryString and transform it to query parameters
@@ -27,19 +28,10 @@ public final class QueryResolver {
         if (bboxQuery != null) {
             String[] bbox = bboxQuery.split(",");
             if (bbox.length == 4) {
-                double queryLowerLatitude = Double.parseDouble(bbox[0]);
-                double queryLowerLongitude = Double.parseDouble(bbox[1]);
-                double queryUpperLatitude = Double.parseDouble(bbox[2]);
-                double queryUpperLongitude = Double.parseDouble(bbox[3]);
-
-                if (queryLowerLatitude < -90)
-                    queryLowerLatitude = -90;
-                if (queryLowerLongitude < -180)
-                    queryLowerLongitude = -180;
-                if (queryUpperLatitude > 90)
-                    queryUpperLatitude = 90;
-                if (queryUpperLongitude > 180)
-                    queryUpperLongitude = 180;
+                double queryLowerLatitude = getLatitudeValue(bbox[0]);
+                double queryLowerLongitude = getLongitudeValue(bbox[1]);
+                double queryUpperLatitude = getLatitudeValue(bbox[2]);
+                double queryUpperLongitude = getLongitudeValue(bbox[3]);
 
                 result.setFrom(new GeoPoint(queryLowerLatitude, queryLowerLongitude));
                 result.setTo(new GeoPoint(queryUpperLatitude, queryUpperLongitude));
@@ -61,5 +53,15 @@ public final class QueryResolver {
         result.setKeywords(keywordsQuery);
 
         return result;
+    }
+
+    private static double getLatitudeValue(String val) {
+        double value = Math.max(-90, Double.parseDouble(val));
+        return Math.min(90, value);
+    }
+
+    private static double getLongitudeValue(String val) {
+        double value = Math.max(-180, Double.parseDouble(val));
+        return Math.min(180, value);
     }
 }

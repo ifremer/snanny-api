@@ -27,6 +27,7 @@ import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
 import fr.ifremer.sensornanny.getdata.serverrestful.transform.GeoAggregatToGridTransformer;
 import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.COORDINATES;
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.*;
 
 @Path(ObservationsESResource.PATH)
@@ -44,6 +45,9 @@ public class ObservationsESResource {
     private ObservationsSearch elasticDb = new ObservationsSearch();
 
     public static final String PATH = "/obs";
+    private static final String BBOX = "bbox";
+    private static final String TIME = "time";
+    private static final String KWORDS = "kwords";
 
     /**
      * Get list of observations
@@ -56,8 +60,8 @@ public class ObservationsESResource {
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public JsonObject getObservations(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery,
-            @QueryParam("kwords") String keywordsQuery) {
+    public JsonObject getObservations(@QueryParam(BBOX) String bboxQuery, @QueryParam(TIME) String timeQuery,
+            @QueryParam(KWORDS) String keywordsQuery) {
 
         JsonObject result = new JsonObject();
         ObservationQuery queryWithCoords = QueryResolver.resolveQueryObservation(bboxQuery, timeQuery, keywordsQuery);
@@ -118,7 +122,7 @@ public class ObservationsESResource {
     @GET
     @Path("withoutgeo")
     @Produces(MediaType.APPLICATION_JSON)
-    public JsonObject getObservationsWithoutData(@QueryParam("time") String timeQuery, @QueryParam("kwords") String keywordsQuery) {
+    public JsonObject getObservationsWithoutData(@QueryParam(TIME) String timeQuery, @QueryParam(KWORDS) String keywordsQuery) {
 
         JsonObject result = new JsonObject();
         ObservationQuery queryWithoutCoords = QueryResolver.resolveQueryObservation(null, timeQuery, keywordsQuery);
@@ -228,8 +232,8 @@ public class ObservationsESResource {
     @GET
     @Path("synthetic/map")
     @Produces(MediaType.APPLICATION_JSON)
-    public Object getObservationsMap(@QueryParam("bbox") String bboxQuery, @QueryParam("time") String timeQuery,
-            @QueryParam("kwords") String keywordsQuery) {
+    public Object getObservationsMap(@QueryParam(BBOX) String bboxQuery, @QueryParam(TIME) String timeQuery,
+            @QueryParam(KWORDS) String keywordsQuery) {
         // Return empty element ne sera pas affiché
         JsonObject result = new JsonObject();
 
@@ -311,8 +315,8 @@ public class ObservationsESResource {
     @GET
     @Path("synthetic/timeline")
     @Produces(MediaType.APPLICATION_JSON)
-    public Object getObservationsTime(@QueryParam("bbox") String bboxQuery,
-            @QueryParam("kwords") String keywordsQuery, @QueryParam("hasCoords") Boolean hasCoords) {
+    public Object getObservationsTime(@QueryParam(BBOX) String bboxQuery,
+            @QueryParam(KWORDS) String keywordsQuery, @QueryParam("hasCoords") Boolean hasCoords) {
         long beginTime = System.currentTimeMillis();
         ObservationQuery query = QueryResolver.resolveQueryObservation(bboxQuery, null, keywordsQuery);
 
@@ -354,8 +358,8 @@ public class ObservationsESResource {
 
                 ret.add("properties", fromJson);
                 ret.add("geometry", geometry);
-                geometry.addProperty("type", "Point");
-                JsonElement coord = fromJson.get("snanny-coordinates");
+                geometry.addProperty(TYPE_PROPERTY, "Point");
+                JsonElement coord = fromJson.get(COORDINATES);
                 JsonArray coordinatesArr = new JsonArray();
                 String[] coords;
                 if(!coord.isJsonNull()) {
@@ -370,7 +374,7 @@ public class ObservationsESResource {
                 }
                 geometry.add("coordinates", coordinatesArr);
 
-                fromJson.remove("snanny-coordinates");
+                fromJson.remove(COORDINATES);
 
                 arr.add(ret);
 
