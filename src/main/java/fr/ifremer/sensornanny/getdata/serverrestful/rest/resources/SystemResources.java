@@ -13,6 +13,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import java.util.logging.Logger;
 
@@ -46,6 +47,13 @@ public class SystemResources {
         JsonObject result = new JsonObject();
         long beginTime = System.currentTimeMillis();
 
+        //special case : and uuid with no start & end date
+        if(uuid.endsWith("__")){
+            uuid = uuid.substring(0, uuid.length()-2);
+        }
+
+        final String sensorId = uuid;
+
         String field = SNANNY_ANCESTORS + "." + SNANNY_ANCESTOR_UUID;
         String filterField = SNANNY_ANCESTOR_UUID;
 
@@ -65,7 +73,7 @@ public class SystemResources {
             result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
 
             final String finalField = filterField;
-            observations.getHits().forEach(hit -> createSystemObject(arr, hit, uuid, finalField));
+            observations.getHits().forEach(hit -> createSystemObject(arr, hit, sensorId, finalField));
 
             result.add(SYSTEM_PROPERTY, arr);
         }
