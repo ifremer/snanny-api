@@ -57,3 +57,23 @@ GET /api/rest/obs/scroll?id=scrollId
 	Configuration in individual.properties
 
 	scrollId : pagination identifier to retrieve next observations of a previous query
+	
+GET /api/rest/systems?bbox=lat1,lon2,lat2,lon2&time=begin,end&kwords=keyword
+
+	Get all the systems informations 
+	
+	lat1,lat2 : range from -90 to 90
+	lon1,lon2 : range from -180 to 180
+	begin,end : timestamp in ms
+	keyword : search keyword, each sequences separated by a comma
+	
+GET /api/rest/system/{uuid}
+    
+    Retrieve all the system informations from its uuid
+    This method return result when a uuid is part of the deployed system 
+    For example a system with uuid can have many deployment 
+    
+GET /api/rest/system/deployement/{uuid}\_{startdate}\_{enddate}
+    
+    Retrieve a specific system information from its uuid and deployment date
+    This method return the specific deployment of a system 

@@ -28,7 +28,7 @@ public class MapResourcesMockTest extends MockTest {
                 new ElasticsearchException(""));
         replayAll();
         JsonObject observations = resource.getObservations("", "", "");
-        Assert.assertEquals(RequestStatuts.TIMEOUT.toString(), observations.get("status"));
+        Assert.assertEquals("\""+RequestStatuts.TIMEOUT.toString()+"\"", observations.get("status").toString());
     }
 
 }
