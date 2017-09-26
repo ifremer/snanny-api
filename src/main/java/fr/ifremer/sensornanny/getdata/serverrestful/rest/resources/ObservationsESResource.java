@@ -1,5 +1,12 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.rest.resources;
 
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.FEATURES_PROPERTY;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.FEATURE_COLLECTION_VALUE;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.SCROLL_PROPERTY;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.STATUS_PROPERTY;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.TOTAL_COUNT_PROPERTY;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.TYPE_PROPERTY;
+
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -10,12 +17,18 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.google.gson.*;
+
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.bucket.filter.InternalFilter;
 import org.elasticsearch.search.aggregations.bucket.geogrid.InternalGeoHashGrid;
 import org.elasticsearch.search.aggregations.bucket.histogram.InternalHistogram;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.GeoConstants;
@@ -28,7 +41,7 @@ import fr.ifremer.sensornanny.getdata.serverrestful.transform.GeoAggregatToGridT
 import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.COORDINATES;
-import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.*;
+
 
 @Path(ObservationsESResource.PATH)
 public class ObservationsESResource {
@@ -193,10 +206,11 @@ public class ObservationsESResource {
             result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
             result.addProperty(TYPE_PROPERTY, FEATURE_COLLECTION_VALUE);
             JsonParser parser = new JsonParser();
-            hits = observations.getHits().totalHits();
-            for (SearchHit searchHit : observations.getHits().hits()) {
+            hits = observations.getHits().getTotalHits();            
+            for (SearchHit searchHit : observations.getHits().getHits()) {
                 arr.add(parser.parse(searchHit.getSourceAsString()).getAsJsonObject().get("doc"));
             }
+            
             // Has more data
             if (arr.size() >= Config.scrollPagination()) {
                 result.addProperty(SCROLL_PROPERTY, observations.getScrollId());
@@ -325,16 +339,18 @@ public class ObservationsESResource {
         // Get Geo Aggregats
         InternalFilter internalFilter = response.getAggregations().get(
                 ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE);
-
-        InternalHistogram<InternalHistogram.Bucket> timeAggregat = null;
+        
+        InternalHistogram timeAggregat = null;
+        
         if (internalFilter != null) {
-            timeAggregat = internalFilter.getAggregations().get(ObservationsFields.AGGREGAT_DATE);
+            timeAggregat = internalFilter.getAggregations().get(ObservationsFields.AGGREGAT_DATE);        
         } else {
-            timeAggregat = response.getAggregations().get(ObservationsFields.AGGREGAT_DATE);
+            timeAggregat = response.getAggregations().get(ObservationsFields.AGGREGAT_DATE);    
         }
-
-        AggregatTimeConsumer aggregatTimeConsumer = new AggregatTimeConsumer();
+        
+        AggregatTimeConsumer aggregatTimeConsumer = new AggregatTimeConsumer();        
         timeAggregat.getBuckets().forEach(aggregatTimeConsumer);
+        
         if (Config.debug()) {
             LOGGER.info(String.format("Get Timeline using query : %s\n\tResult :{numberOfAggregats: '%s', took '%dms'}",
                     query, aggregatTimeConsumer.getResult().size(), System.currentTimeMillis() - beginTime));

@@ -4,29 +4,32 @@ import static fr.ifremer.sensornanny.getdata.serverrestful.constants.Observation
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.SYSTEMS_HASDATA;
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
+import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.elasticsearch.action.search.SearchRequestBuilder;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
+import org.elasticsearch.client.Client;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.ExistsQueryBuilder;
+import org.elasticsearch.index.query.Operator;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.geogrid.GeoGridAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.histogram.HistogramAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
+
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.User;
 import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.lucene.queryparser.xml.FilterBuilder;
-import org.elasticsearch.action.search.SearchRequestBuilder;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchType;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.query.QueryStringQueryBuilder.Operator;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.bucket.geogrid.GeoHashGridBuilder;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramBuilder;
-import org.elasticsearch.search.aggregations.bucket.nested.NestedBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsBuilder;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * This class allow access to elasticsearch observations databases
@@ -37,11 +40,9 @@ public class ObservationsSearch {
 
     private static final Log LOGGER = LogFactory.getLog(ObservationsSearch.class);
 
-    private static final String SNANNY_SHARE_AUTH = "snanny-access.snanny-access-auth";
-
-    private static final String SNANNY_AUTHOR = "snanny-author";
-
-    private static final String SNANNY_ACCESS = "snanny-access.snanny-access-type";
+    private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
+    private static final String SNANNY_AUTHOR = "doc.snanny-author";
+    private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
 
     private static final String EMPTY_STRING = "";
 
@@ -71,17 +72,19 @@ public class ObservationsSearch {
 
         if (query.getFrom() != null && query.getTo() != null) {
 
-            // Prepare geo filter
-            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom()).topRight(query.getTo());
-
+            // Prepare geo filter        	          
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES)
+            		.setCornersOGC(query.getFrom(),query.getTo());
+            
             // Add Range data
             searchRequest.setPostFilter(geoFilter);
         }
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
         searchRequest.setFetchSource(EXPORT_OBSERVATIONS_FIELDS, EXCLUDE_OBSERVATION_FIELDS);
         if(!hasCoords) {
-            MissingQueryBuilder filterBuilder = missingQuery(ObservationsFields.COORDINATES).nullValue(true);
+            QueryBuilder filterBuilder = new BoolQueryBuilder().mustNot(
+                    new ExistsQueryBuilder(ObservationsFields.COORDINATES)
+            );
             searchRequest.setPostFilter(filterBuilder);
         }
 
@@ -114,16 +117,19 @@ public class ObservationsSearch {
     public SearchResponse getMap(ObservationQuery query, int precision) {
 
         SearchRequestBuilder searchRequest = createQuery(query);
-        GeoHashGridBuilder geohashAggregation = AggregationBuilders.geohashGrid(
+        
+        GeoGridAggregationBuilder geohashAggregation = AggregationBuilders.geohashGrid(
                 ObservationsFields.AGGREGAT_GEOGRAPHIQUE).precision(precision).field(ObservationsFields.COORDINATES);
-
+        
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
-            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom()).topRight(query.getTo());
-            searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
-                    .subAggregation(geohashAggregation).filter(geoFilter));
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES)
+            		.setCornersOGC(query.getFrom(),query.getTo());
+
+            searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE, geoFilter)
+            		.subAggregation(geohashAggregation)); 
+            
         } else {
             searchRequest.addAggregation(geohashAggregation);
         }
@@ -154,18 +160,21 @@ public class ObservationsSearch {
         }
 
         searchRequest.setSearchType(SearchType.DFS_QUERY_THEN_FETCH);
+        
         long interval = Config.syntheticViewTimeSize() * DAYS_IN_MILLIS;
-        DateHistogramBuilder histogram = AggregationBuilders.dateHistogram(ObservationsFields.AGGREGAT_DATE)
+        
+        HistogramAggregationBuilder histogram = AggregationBuilders.histogram(ObservationsFields.AGGREGAT_DATE)
                 .field(ObservationsFields.RESULTTIMESTAMP)
                 .interval(interval).minDocCount(0);
 
         if (query.getFrom() != null && query.getTo() != null) {
             // Prepare geo filter
-            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES).bottomLeft(query
-                    .getFrom()).topRight(query.getTo());
-
-            searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE)
-                    .subAggregation(histogram).filter(geoFilter));
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(ObservationsFields.COORDINATES)
+            		.setCornersOGC(query.getFrom(),query.getTo());
+            
+            searchRequest.addAggregation(AggregationBuilders.filter(ObservationsFields.ZOOM_IN_AGGREGAT_GEOGRAPHIQUE, geoFilter)
+            		.subAggregation(histogram));
+            
         } else {
             searchRequest.addAggregation(histogram);
         }
@@ -243,16 +252,18 @@ public class ObservationsSearch {
 
         SearchRequestBuilder searchRequest = createQuery(query);
 
-        TermsBuilder terms = AggregationBuilders.terms(AGGREGAT_TERM).field(SNANNY_ANCESTORS + "." + SNANNY_ANCESTOR_UUID);
+        //TermsBuilder terms = AggregationBuilders.terms(AGGREGAT_TERM).field(SNANNY_ANCESTORS + "." + SNANNY_ANCESTOR_UUID);
+        TermsAggregationBuilder terms = AggregationBuilders.terms(AGGREGAT_TERM).field(SNANNY_ANCESTORS + "." + SNANNY_ANCESTOR_UUID);
         addAggregationsInTerm(terms, SNANNY_ANCESTOR_NAME, SNANNY_ANCESTOR_DEPLOYMENTID, SNANNY_ANCESTOR_DESCRIPTION, SNANNY_ANCESTOR_TERMS);
 
-        NestedBuilder nested = AggregationBuilders.nested(AGGREGAT).path(SNANNY_ANCESTORS).subAggregation(terms);
-
+        // NestedBuilder nested = AggregationBuilders.nested(AGGREGAT).path(SNANNY_ANCESTORS).subAggregation(terms);
+        NestedAggregationBuilder nested = AggregationBuilders.nested(AGGREGAT, SNANNY_ANCESTORS).subAggregation(terms);
+        
         if (query.getFrom() != null && query.getTo() != null) {
 
             // Prepare geo filter
-            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(COORDINATES).bottomLeft(query
-                    .getFrom()).topRight(query.getTo());
+            QueryBuilder geoFilter = QueryBuilders.geoBoundingBoxQuery(COORDINATES)
+            		.setCornersOGC(query.getFrom(),query.getTo());
 
             // Add Range data
             searchRequest.setPostFilter(geoFilter);
@@ -268,7 +279,9 @@ public class ObservationsSearch {
     public SearchResponse getSystemsByField(String id, String field) {
         SearchRequestBuilder requestBuilder = nodeManager.getClient().prepareSearch(Config.observationsIndex());
 
-        requestBuilder.setQuery(QueryBuilders.nestedQuery(ObservationsFields.SNANNY_ANCESTORS, QueryBuilders.boolQuery().must(QueryBuilders.matchQuery(field, id))));
+        requestBuilder.setQuery(QueryBuilders.termQuery(ObservationsFields.SNANNY_ANCESTORS, 
+        		QueryBuilders.boolQuery().must(QueryBuilders.matchQuery(field, id))));
+        
         requestBuilder.setSize(1);
 
         return requestBuilder.execute().actionGet();

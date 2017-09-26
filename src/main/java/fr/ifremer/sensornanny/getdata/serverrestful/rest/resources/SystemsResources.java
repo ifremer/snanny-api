@@ -1,30 +1,31 @@
 package fr.ifremer.sensornanny.getdata.serverrestful.rest.resources;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import fr.ifremer.sensornanny.getdata.serverrestful.Config;
-import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
-import fr.ifremer.sensornanny.getdata.serverrestful.dto.RequestStatuts;
-import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
-import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.*;
+import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.*;
+
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
-import java.util.List;
-import java.util.function.Consumer;
-import java.util.logging.Logger;
 
-import static fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields.*;
-import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.EMPTY;
-import static fr.ifremer.sensornanny.getdata.serverrestful.constants.PropertiesFields.STATUS_PROPERTY;
-import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.*;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.search.aggregations.bucket.terms.StringTerms;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import fr.ifremer.sensornanny.getdata.serverrestful.Config;
+import fr.ifremer.sensornanny.getdata.serverrestful.dto.ObservationQuery;
+import fr.ifremer.sensornanny.getdata.serverrestful.dto.RequestStatuts;
+import fr.ifremer.sensornanny.getdata.serverrestful.io.ObservationsSearch;
+import fr.ifremer.sensornanny.getdata.serverrestful.util.query.QueryResolver;
 
 /**
  * Created by asi on 30/09/16.
@@ -57,7 +58,7 @@ public class SystemsResources {
             result.addProperty(STATUS_PROPERTY, RequestStatuts.EMPTY.toString());
         } else {
             result.addProperty(STATUS_PROPERTY, RequestStatuts.SUCCESS.toString());
-            StringTerms terms = (StringTerms) observations.getAggregations().get(AGGREGAT).getProperty(AGGREGAT_TERM);
+            StringTerms terms = (StringTerms) observations.getAggregations().get(AGGREGAT);
             terms.getBuckets().forEach(new Consumer<Terms.Bucket>() {
                 @Override
                 public void accept(Terms.Bucket bucket) {
@@ -91,7 +92,7 @@ public class SystemsResources {
 
 
     private String getSignificantValue(Terms.Bucket bucket, String id) {
-        List<Terms.Bucket> buckets = ((StringTerms) bucket.getAggregations().getProperty(id)).getBuckets();
+        List<Terms.Bucket> buckets = bucket.getAggregations().get(id);
         return buckets.size() > 0 ? formatForJson(buckets.get(0).getKeyAsString()) : EMPTY;
     }
 
