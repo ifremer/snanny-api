@@ -4,6 +4,7 @@ import static fr.ifremer.sensornanny.getdata.serverrestful.constants.Observation
 import static fr.ifremer.sensornanny.getdata.serverrestful.constants.SystemFields.SYSTEMS_HASDATA;
 import static org.elasticsearch.index.query.QueryBuilders.*;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -25,6 +26,7 @@ import org.elasticsearch.search.aggregations.bucket.nested.NestedAggregationBuil
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 
 import fr.ifremer.sensornanny.getdata.serverrestful.Config;
+import fr.ifremer.sensornanny.getdata.serverrestful.cache.OwncloudGroupsCache;
 import fr.ifremer.sensornanny.getdata.serverrestful.constants.ObservationsFields;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.CurrentUserProvider;
 import fr.ifremer.sensornanny.getdata.serverrestful.context.Role;
@@ -40,9 +42,9 @@ public class ObservationsSearch {
 
     private static final Log LOGGER = LogFactory.getLog(ObservationsSearch.class);
 
-    private static final String SNANNY_SHARE_AUTH = "doc.snanny-access.snanny-access-auth";
-    private static final String SNANNY_AUTHOR = "doc.snanny-author";
-    private static final String SNANNY_ACCESS = "doc.snanny-access.snanny-access-type";
+    private static final String SNANNY_SHARE_AUTH = "snanny-access.snanny-access-auth";
+    private static final String SNANNY_AUTHOR = "snanny-author";
+    private static final String SNANNY_ACCESS = "snanny-access.snanny-access-type";
 
     private static final String EMPTY_STRING = "";
 
@@ -233,13 +235,18 @@ public class ObservationsSearch {
         // If current user exist result will be is public or isAuthor or is shared
         if (currentUser != null) {
             if (!Role.ADMIN.equals(currentUser.getRole())) {
+                //get user groups
+                List<String> groups = OwncloudGroupsCache.getInstance().getData(currentUser.getLogin());
+
                 return QueryBuilders.boolQuery()
-                        /** Should be public */
+                                    /* Should be public */
                         .should(publicFilter)
-                                /** Should be author */
+                                    /* Should be author */
                         .should(QueryBuilders.termQuery(SNANNY_AUTHOR, currentUser.getLogin()))
-                                /** Should be shared with current user */
-                        .should(QueryBuilders.termQuery(SNANNY_SHARE_AUTH, currentUser.getLogin()));
+                                    /* Should be shared with current user */
+                        .should(QueryBuilders.termQuery(SNANNY_SHARE_AUTH, currentUser.getLogin()))
+                                    /* Should be in the group */
+                        .should(QueryBuilders.termsQuery(SNANNY_SHARE_AUTH, groups));
             } else if (Role.ADMIN.equals(currentUser.getRole())) {
                 return QueryBuilders.matchAllQuery();
             }

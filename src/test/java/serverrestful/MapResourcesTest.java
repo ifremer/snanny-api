@@ -35,13 +35,19 @@ public class MapResourcesTest {
     public void testGetGrid() {
 
         JsonObject map = (JsonObject) resource.getObservations("-180.00,-90.74,180.74,80.35", null, null);
-
         System.out.println(map.get("totalCount"));
+    }
+
+    @Test
+    public void testGetGridWithUserFilter(){
 
         AssertionHolder.setAssertion(new FakeAssertion("admin"));
-        map = (JsonObject) resource.getObservations("-180.00,-90.74,180.74,80.35", null, null);
+        JsonObject map = resource.getObservations("-76.44,-172.9,76.44,172.9", null, null);
+        Assert.assertEquals(map.get("status").getAsString(), "tooMany");
 
-        System.out.println(map.get("totalCount"));
+        AssertionHolder.setAssertion(new FakeAssertion("ljhsfsfjsdfh"));
+        map = resource.getObservations("-76.44,-172.9,76.44,172.9", null, null);
+        Assert.assertEquals(map.get("status").getAsString(), "empty");
     }
 
     @Test

@@ -146,7 +146,7 @@ public class Config {
     }
 
     public static String casServerName() {
-        return get("cas.serveurName");
+        return get("cas.serverName");
     }
 
     /**
@@ -156,6 +156,14 @@ public class Config {
      */
     public static String smlEndpoint() {
         return get("sml.endpoint");
+    }
+
+    public static String owncloudEndpoint() {
+        return get("owncloud.endpoint");
+    }
+
+    public static String owncloudCredentials(){
+        return get("owncloud.credentials");
     }
 
     /**
